@@ -1,11 +1,16 @@
 # Changelog
 
-## Unreleased
+## v1.4.1
 - **Scripts in `docs/scripts/`.** The check scripts can now live in `docs/scripts/` as well as `scripts/`. The
   coordinator looks in both when it scans a project, `detect-mode.py` reports which one a repo uses, and the
   pre-commit hook and both workflow templates find the scripts in either folder.
 - README: new "Where everything goes" section: where the skills go for each Claude app, and a full map of a
   project's files. Wiki FAQ: both questions.
+
+### Upgrading
+- Re-upload `agent-coordinator.zip` and `project-handoff.zip` (or replace both folders in `~/.claude/skills/`).
+- Projects that already have the hook or workflows: copy the new `templates/hooks/pre-commit` and
+  `templates/github/workflows/*.yml` over the old ones only if you want to move your scripts to `docs/scripts/`.
 
 ## v1.4.0
 
