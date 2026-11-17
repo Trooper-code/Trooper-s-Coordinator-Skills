@@ -8,7 +8,8 @@ the repo remembers everything.** The [README](https://github.com/Trooper-code/Tr
 2. [[Writing Agent Prompts]]: what makes a prompt the agent can run without you
 3. [[Reviewing Agent Work]]: how Claude checks the agent's branch before merging
 4. [[Session Handoffs]]: keeping context small and starting fresh chats with nothing lost
-5. [[Tips and FAQ]]
+5. [[Memory Model]]: the technical side: memory tiers, the RNN/LSTM comparison, token math
+6. [[Tips and FAQ]]
 
 ## Why this works
 - **Cost:** the expensive model spends its tokens on judgment (planning, reviewing), not on reading huge files

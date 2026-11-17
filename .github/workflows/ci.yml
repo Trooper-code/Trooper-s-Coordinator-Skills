@@ -1,0 +1,47 @@
+# Validates the skills and docs on every push and pull request.
+# Pushing a tag like v1.1.0 also builds one upload-ready .zip per skill and attaches them to a GitHub Release,
+# so people using the Claude apps can download a skill and upload it without zipping anything themselves.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate skills and links
+        run: python scripts/validate.py
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build one zip per skill, plus one with everything
+        run: |
+          mkdir -p dist
+          cd skills
+          for d in */; do
+            name="${d%/}"
+            zip -r "../dist/${name}.zip" "$name"
+          done
+          cd ..
+          zip -r dist/all-skills-and-templates.zip skills templates LICENSE README.md
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/*.zip \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes

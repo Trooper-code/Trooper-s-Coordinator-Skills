@@ -29,3 +29,5 @@ research docs.
 - Rewrite "How it works now"; don't append to it.
 - Merge a new lesson into an existing one if it's the same idea. Keep about 10–12.
 - After review, the agent's pasted summary is stale. Replace it with the placeholder.
+
+Why the rules look like this, in ML terms: [[Memory Model]].
