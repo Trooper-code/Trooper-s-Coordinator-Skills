@@ -54,21 +54,14 @@ Chats get slower, pricier and more forgetful as they grow. Instead of keeping on
 purpose and start the next one from `docs/HANDOFF.md`.
 
 ```mermaid
-sequenceDiagram
-    participant Y as You
-    participant C1 as Old chat
-    participant R as Repo
-    participant A as Coding agent
-    participant C2 as New chat
-    Y->>C1: "update the handoff"
-    C1->>R: write findings to docs, update MILESTONES.md and HANDOFF.md, commit
-    C1-->>Y: what to run first + one line for the agent
-    Y->>A: "Read and follow docs/prompts/next-step.md"
-    A->>R: work on its branch, write findings
-    A-->>Y: summary
-    Y->>C2: paste HANDOFF.md + the agent's summary
-    C2->>R: read the files HANDOFF.md points to
-    C2-->>Y: review, test steps, next prompt
+flowchart TD
+    O["Old chat"] -->|"1. you say: update the handoff"| R[("Repo docs<br/>HANDOFF.md committed")]
+    O -->|"2. what to run + the agent's prompt line"| Y["You"]
+    Y -->|"3. paste the prompt line"| A["Coding agent"]
+    A -->|"4. works on its branch, writes findings"| R
+    A -->|"5. summary"| Y
+    Y -->|"6. paste HANDOFF.md + summary"| N["New chat"]
+    R -->|"7. reads the docs HANDOFF.md points to"| N
 ```
 
 **When to hand off**
