@@ -18,8 +18,11 @@ line of HANDOFF.md, so it holds the current state and the next step, not history
 - `docs/prompts/` — prompts for the coding agent (see the agent-coordinator skill).
 - `docs/reports/` — the coding agent's reports (it commits them on its branch), with `TEMPLATE.md` for the format.
 - `AGENTS.md` — the coding agent's standing rules (see the agent-coordinator skill).
-- `scripts/check-handoff.py` — checks HANDOFF.md's size, sections, ending and paths. Copy it from the templates if
-  it's missing.
+- `docs/DECISIONS.md` — real decisions: what was chosen, what was rejected, why.
+- `docs/research/INDEX.md` — one line per research topic, pointing to its file and section.
+- `scripts/check-handoff.py` — checks HANDOFF.md's size, sections, ending and paths, and notes lessons to promote.
+- `scripts/check-research.py` — lists confirmed facts proven on older tool versions, and broken index entries.
+  Copy either script from the templates if it's missing.
 
 Starter templates: `templates/` in https://github.com/Trooper-code/Trooper-s-Coordinator-Skills
 
@@ -38,6 +41,11 @@ Starter templates: `templates/` in https://github.com/Trooper-code/Trooper-s-Coo
 
 2. **Write missing findings to the research docs first.** Put each finding in the section it belongs to and fix old
    claims that were wrong. Don't just append a session diary.
+   - Stamp confirmed findings with what they were proven on: `[confirmed @ <tag or branch> | tool=version, ...]`.
+   - Give every new topic or section a line in `docs/research/INDEX.md`.
+   - Record any real decision made this session in `docs/DECISIONS.md` (decided, rejected, why, revisit-if).
+   - If the Tool versions changed this session, run `python scripts/check-research.py` and add re-checking the
+     facts it lists to the next prompt.
 
 3. **Update the status board** (`docs/MILESTONES.md`):
    - add a dated progress-log entry for each finished step or finding;
@@ -69,8 +77,10 @@ Starter templates: `templates/` in https://github.com/Trooper-code/Trooper-s-Coo
      - give the user test steps;
      - merge and tag if it works, or write the follow-up prompt if it doesn't.
    - **Lessons**: one line per trap, grouped by theme. Merge a new lesson into an existing line when it's the same
-     idea; keep about 10–12 lines. Once a lesson is enforced by the prompt template's constraints or acceptance
-     checks, drop it here.
+     idea; keep about 10–12 lines.
+     - **A lesson hit again** gets `(x2)` (then `(x3)`...) at the end of its line. The checker prints a note for
+       those: promote it into a rule in `AGENTS.md`, a check script, or the prompt template, then drop it here.
+     - Once a lesson is enforced by a rule or check, drop it here.
    - Leave out the user's personal preferences (their profile/settings already supply them).
    - End with the placeholder line `[Paste the coding agent's latest summary here]`. If an old pasted summary is
      there, **replace** it with the placeholder — once reviewed, it's stale, and what was true is in the docs now.

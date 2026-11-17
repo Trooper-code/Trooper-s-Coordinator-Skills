@@ -50,12 +50,12 @@ story behind it is on [Inspiration](https://github.com/Trooper-code/Trooper-s-Co
 
 | Skill | What it does |
 |-------|--------------|
-| [`agent-coordinator`](skills/agent-coordinator/SKILL.md) | Makes Claude act as the coordinator: sets up new or existing projects (including an `AGENTS.md` rules file tailored to your coding agent), writes self-contained prompts, reviews the agent's branches and reports (bugs → gaps → nitpicks), merges and tags. Keeps Claude out of context-heavy investigations. |
+| [`agent-coordinator`](skills/agent-coordinator/SKILL.md) | Makes Claude act as the coordinator: sets up new or existing projects (including an `AGENTS.md` rules file tailored to your coding agent), writes self-contained prompts, reviews the agent's branches and reports (bugs → gaps → nitpicks), merges and tags. Also imports deep-research results as checkable claims and cuts releases with written notes. Keeps Claude out of context-heavy investigations. |
 | [`project-handoff`](skills/project-handoff/SKILL.md) | Ends a session cleanly: writes every finding to the repo docs, rewrites a short `docs/HANDOFF.md`, checks it with `check-handoff.py`, and commits, so the next chat starts with full context from one small file. |
 
 They work on their own, but they're built to be used together.
 
-**New in v1.3.0:** the agent follows an [`AGENTS.md` rules file](#agentsmd-the-agents-standing-rules) with a section written for your specific coding agent, commits its [report to the repo](#agent-reports-no-more-pasting) instead of you pasting it, and [stops and reports](#stop-conditions-and-the-abandon-rule) when it's stuck. Plus a tool-versions table, a handoff checker script, a cheap status mode and an abandon rule. See the [changelog](CHANGELOG.md).
+**New in v1.4.0:** [release mode](#release-mode-no-more-hand-written-release-notes) writes your changelog and release notes, [research import](#research-import-deep-research-as-leads-not-facts) turns deep-research reports into checkable claims, a [copyright guard](#copyright-guard) blocks ROMs and saves before they're committed, and confirmed facts now [remember the tool versions](#version-aware-facts) they were proven on. Plus a decisions log, a research index, [agent profiles](#agent-profiles) and [seven check scripts](#the-check-scripts). See the [changelog](CHANGELOG.md).
 
 ## How it works
 
@@ -193,18 +193,21 @@ prompt from the **last good tag**.
 The agent records the versions it used in its report, and Claude checks them first on review. A mismatch is treated
 as a bug until explained. Version mismatches are one of the most common causes of "works on my machine" bugs.
 
-### Handoff checker
+### The check scripts
 
-[`templates/scripts/check-handoff.py`](templates/scripts/check-handoff.py) goes in your project's `scripts/` folder.
-`project-handoff` runs it before every commit:
+Seven small scripts in [`templates/scripts/`](templates/scripts) go in your project's `scripts/` folder. Claude runs
+them at the right moments, and you can run them yourself. They need Python 3.9 or newer and nothing else, and each
+problem they print says how to fix it.
 
-```
-python scripts/check-handoff.py
-```
-
-It checks that `HANDOFF.md` is within its size budget (120 lines / 10 KB), has every required section, ends with the
-agent-summary line, and that every repo path it points to exists. Each problem it prints says how to fix it.
-Standard library only, so there's nothing to install.
+| Script | When it runs | What it catches |
+|--------|--------------|-----------------|
+| `check-prompt.py` | after Claude writes an agent prompt | missing sections, `AGENTS.md` not first, unlabeled facts, leftover placeholders |
+| `check-report.py` | first step of every review | no status, a stop with no reason, findings without a label or evidence, tests without output |
+| `check-research.py` | on review, and when tool versions change | facts proven on older tool versions; broken research index entries |
+| `check-handoff.py` | before every handoff commit | over budget, missing sections, dead paths; lessons that should become rules |
+| `check-safe-to-publish.py` | pre-commit hook and CI | ROMs, disc images, console executables, saves, big binaries |
+| `release-notes.py` | release mode and the release workflow | prints a version's `CHANGELOG.md` section as release notes |
+| `detect-mode.py` | before kickoff or adopt | which mode a repo needs, and which workflow files it has or is missing |
 
 ### Status mode
 
@@ -214,6 +217,79 @@ Use agent-coordinator. Status.
 ```
 Claude reads only `MILESTONES.md` and `HANDOFF.md` and answers in about five lines: where things stand, who's on
 what, the last test result, and what's next.
+
+## Built for the long haul
+
+### Release mode: no more hand-written release notes
+
+```
+Use agent-coordinator. Release v1.4.0.
+```
+Claude:
+- collects what changed since the last tag from the milestone board, the merged agent reports and the git log;
+- writes the `CHANGELOG.md` entry for your users, with an Upgrading section when they need to do something;
+- tags the release, or hands you the two commands if it can't push tags.
+
+The release workflow ([`templates/github/workflows/release.yml`](templates/github/workflows/release.yml)) then
+creates the GitHub Release with that changelog section as its notes, and attaches your build. The skills in this repo
+are released the same way.
+
+### Research import: deep research as leads, not facts
+
+```
+Use agent-coordinator. Import research:
+<paste the Gemini Deep Research / ChatGPT / Perplexity results>
+```
+Claude splits the report into individual claims and files them in the right research sections, each labeled
+**unverified** with its source.
+- A claim that **contradicts a confirmed fact** is listed as a conflict for you, never filed as true.
+- A claim that matches a known fact adds a source to it instead of making a duplicate.
+- The claims the next milestone depends on go into a **verify prompt** for the coding agent, which proves or
+  disproves each one with evidence.
+
+### Copyright guard
+
+[`check-safe-to-publish.py`](templates/scripts/check-safe-to-publish.py) runs as a pre-commit hook
+([`templates/hooks/pre-commit`](templates/hooks/pre-commit)) and in CI
+([`templates/github/workflows/checks.yml`](templates/github/workflows/checks.yml)). It blocks:
+- ROMs, disc images, console executables and packages, save files and emulator states;
+- any binary over 5 MB.
+
+Install the hook once per clone with `cp scripts/hooks/pre-commit .git/hooks/pre-commit`. It explains each block
+in plain English and how to fix it. Intentional exceptions, like a tiny test file you made from
+scratch, go in `.publish-allowlist` with a comment saying why. It checks names, sizes and contents that look
+binary, so it catches accidents, not someone determined to get around it.
+
+### Version-aware facts
+
+A confirmed finding records what it was proven on:
+```
+Save header is 0x40 bytes. [confirmed @ m3-p1 | xenia-canary=1.2.3, dotnet=8.0.1]
+```
+When the Tool versions table in `HANDOFF.md` changes (a new emulator build, say), `check-research.py` lists every
+fact proven on the old version, and Claude puts re-checking them into the next prompt. "Confirmed" stays true
+across updates, instead of quietly going stale.
+
+### Decisions log and research index
+
+- [`docs/DECISIONS.md`](templates/DECISIONS.md) keeps one short entry per real decision: what was chosen, what was
+  rejected, why, and what would change the answer. New chats read it instead of reopening settled questions, and
+  new facts get a new entry rather than a rewrite of history.
+- [`docs/research/INDEX.md`](templates/research/INDEX.md) has one line per research topic, linking to its file and
+  section. Claude and the agent look things up there first instead of skimming every doc, and `check-research.py`
+  catches entries that point nowhere.
+
+### Lessons become rules
+
+A lesson hit a second time gets `(x2)` in `HANDOFF.md`. The handoff checker flags it, and Claude moves it into
+`AGENTS.md`, a check script or the prompt template. The Lessons list stays short, and fixed problems stay fixed.
+
+### Agent profiles
+
+[`templates/agents/`](templates/agents) has ready-made agent-specific sections for **Antigravity**, **Codex**,
+**Claude Code** and **Cursor**, plus a generic one to fill in. Each says how that agent loads rules, its tools, its
+permission limits and its quirks, with every fact labeled confirmed or unverified. Claude starts from the profile
+instead of asking from scratch. Profiles for other agents are welcome as pull requests.
 
 ## The memory model
 
@@ -274,8 +350,9 @@ Use agent-coordinator. Start a new project: <name>. Repo: <GitHub URL or folder>
 Claude then:
 1. asks for repo access, and 1–3 questions only if the goal is unclear;
 2. asks which tools your coding agent has, and writes `AGENTS.md` with a section for that agent;
-3. scaffolds `docs/MILESTONES.md`, `docs/HANDOFF.md` (with a tool-versions table), `docs/research/`,
-   `docs/prompts/`, `docs/reports/TEMPLATE.md` and `scripts/check-handoff.py` (from [`templates/`](templates));
+3. scaffolds `docs/MILESTONES.md`, `docs/HANDOFF.md` (with a tool-versions table), `docs/DECISIONS.md`,
+   `docs/research/INDEX.md`, `docs/prompts/`, `docs/reports/TEMPLATE.md`, `CHANGELOG.md`, the check scripts, the
+   copyright-guard hook, and CI and release workflows (from [`templates/`](templates));
 4. plans the milestones and writes the first agent prompt;
 5. commits, and gives you the one line to paste into your coding agent.
 
@@ -301,14 +378,17 @@ Claude then:
 2. **Inventories** what you already have against what the workflow needs, and uses your existing files where they
    fit (an existing roadmap gets linked from `MILESTONES.md`, not copied).
 3. **Creates only the missing files**: `AGENTS.md` (or adds the missing sections to your existing rules file),
-   `docs/MILESTONES.md`, `docs/HANDOFF.md`, `docs/research/`, `docs/prompts/`, `docs/reports/TEMPLATE.md`,
-   `scripts/check-handoff.py`. It never overwrites, moves or renames your files.
-4. **Labels what it learned**: anything taken from existing docs is *unverified* until tested.
-5. **Plans ahead** from what it found (half-done branches, failing tests, TODOs, research gaps), asking 1–3 questions
+   `docs/MILESTONES.md`, `docs/HANDOFF.md`, `docs/DECISIONS.md`, `docs/research/INDEX.md` (indexing your existing
+   research), `docs/prompts/`, `docs/reports/TEMPLATE.md`, the check scripts and workflows. It never overwrites,
+   moves or renames your files.
+4. **Runs the copyright guard** over the whole repo, and tells you first if anything already committed is flagged.
+   Removing a file from history is your call.
+5. **Labels what it learned**: anything taken from existing docs is *unverified* until tested.
+6. **Plans ahead** from what it found (half-done branches, failing tests, TODOs, research gaps), asking 1–3 questions
    only when the direction is a real judgment call.
-6. **Writes the first agent prompt.** If big parts of the code are undocumented, that's an *M0 survey* that has the
+7. **Writes the first agent prompt.** If big parts of the code are undocumented, that's an *M0 survey* that has the
    agent map them into `docs/research/`.
-7. **Commits** the new docs in one commit and gives you a summary, the plan, and the line to paste into your agent.
+8. **Commits** the new docs in one commit and gives you a summary, the plan, and the line to paste into your agent.
 
 You don't have to pick the right command: if the repo already has `docs/HANDOFF.md`, either command just continues
 from it.
@@ -323,6 +403,15 @@ Continue my project. Read docs/HANDOFF.md and do its "First thing to do".
 
 Just want to know where things stand? `Use agent-coordinator. Status.`
 
+### Other commands
+
+| Say | What happens |
+|-----|--------------|
+| `Use agent-coordinator. Import research:` + paste | Deep-research results filed as unverified claims, conflicts flagged, a verify prompt for the agent |
+| `Use agent-coordinator. Release v1.2.0.` | Changelog entry written, tagged, release notes generated by CI |
+| `Use agent-coordinator. Status.` | Five-line status from two files |
+| `Update the handoff.` | `project-handoff`: findings saved, `HANDOFF.md` rewritten and checked, committed |
+
 **Full guide:** the [wiki](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/wiki) covers the whole
 workflow, writing prompts, reviewing agent work, handoffs and the memory model.
 
@@ -333,17 +422,24 @@ skills/
   agent-coordinator/SKILL.md
   project-handoff/SKILL.md
 CHANGELOG.md        what changed in each release
-templates/
-  AGENTS.md         -> your AGENTS.md (repo root)
-  HANDOFF.md        -> your docs/HANDOFF.md
-  MILESTONES.md     -> your docs/MILESTONES.md
-  PROMPT.md         -> your docs/prompts/<MILESTONE>-<slug>.md
-  REPORT.md         -> your docs/reports/TEMPLATE.md
-  scripts/check-handoff.py -> your scripts/check-handoff.py
-docs/wiki/          source of the wiki pages
-scripts/validate.py checks skills and links (runs in CI)
-scripts/test_check_handoff.py tests the handoff checker (runs in CI)
-.github/workflows/  CI, plus release zips on tags
+skills/agent-coordinator/reference/
+  release.md, research-import.md, scripts.md   detail for those modes
+templates/                      copied into your project (bundled inside the release zips too)
+  AGENTS.md                  -> AGENTS.md (repo root)
+  HANDOFF.md                 -> docs/HANDOFF.md
+  MILESTONES.md              -> docs/MILESTONES.md
+  DECISIONS.md               -> docs/DECISIONS.md
+  research/INDEX.md          -> docs/research/INDEX.md
+  PROMPT.md                  -> docs/prompts/<MILESTONE>-<slug>.md
+  REPORT.md                  -> docs/reports/TEMPLATE.md
+  scripts/*.py               -> scripts/ (the seven check scripts)
+  hooks/pre-commit           -> scripts/hooks/pre-commit, installed into .git/hooks/ (copyright guard)
+  github/workflows/*.yml     -> .github/workflows/ (checks, release)
+  agents/*.md                   agent profiles for the AGENTS.md agent-specific section
+docs/wiki/                      source of the wiki pages
+scripts/validate.py             checks skills, the files they mention, and every link (CI)
+tests/                          script tests (CI) and SCENARIOS.md, the manual skill checklist
+.github/workflows/ci.yml        CI, plus release zips and changelog notes on tags
 ```
 
 ## Contributing
@@ -355,13 +451,19 @@ Before opening a PR, run:
 
 ```
 python scripts/validate.py
+python tests/test_check_handoff.py
+python tests/test_scripts.py
 ```
 
-It checks that every skill's `name` and `description` will be accepted by claude.ai and Claude Code, and that
-every link in the README, templates and wiki resolves. CI runs the same check.
+- `validate.py` checks that every skill's `name` and `description` will be accepted by claude.ai and Claude Code,
+  that every `templates/` or `reference/` file a skill mentions exists, and that every link resolves.
+- The tests run each script against throwaway repos.
+- What a skill makes Claude *do* can't run in CI. If you change a skill, walk through the matching rows of
+  [`tests/SCENARIOS.md`](tests/SCENARIOS.md) in a fresh Claude chat.
 
-**Releasing:** push a tag like `v1.1.0`. CI validates, builds an upload-ready `.zip` per skill, and attaches them
-to a GitHub Release.
+**Releasing:** add a `## vX.Y.Z` section to `CHANGELOG.md`, then push the tag. CI validates, builds an
+upload-ready `.zip` per skill with the templates bundled inside, and creates the GitHub Release with that changelog
+section as its notes.
 
 ## License
 

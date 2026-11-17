@@ -1,0 +1,10 @@
+#!/bin/sh
+# Blocks commits that would add game files, ROMs, saves or big binaries to a public repo.
+#
+# Keep a copy in the repo at scripts/hooks/pre-commit, then install it once (from the repo root):
+#   cp scripts/hooks/pre-commit .git/hooks/pre-commit        (or copy it there by hand on Windows)
+# Git for Windows runs this with its own sh, so it works from PowerShell, cmd and GUI clients too.
+# It needs Python on your PATH. To skip it once on purpose: git commit --no-verify
+
+if command -v python3 >/dev/null 2>&1; then PY=python3; else PY=python; fi
+exec "$PY" scripts/check-safe-to-publish.py --staged

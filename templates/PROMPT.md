@@ -9,7 +9,8 @@
 - `AGENTS.md` (standing rules, including your agent-specific section)
 - `docs/HANDOFF.md`, sections "How it works now" and "Tool versions"
 - `docs/MILESTONES.md`, section <N>
-- `docs/research/<topic>.md`
+- `docs/research/INDEX.md`, then `docs/research/<topic>.md`
+- `docs/DECISIONS.md` entries <D#> (only if this task touches a past decision)
 
 ## Goal
 <One or two sentences: what should be true when this is done.>

@@ -1,9 +1,49 @@
 # Changelog
 
-## Unreleased
-- README: new "Why I built this" section near the top: how neural-network memory (RNN hidden state, LSTM gates,
-  external memory, error propagation) inspired the workflow, and why it helps agentic work.
-- Wiki: new **Inspiration** page with the full story; linked from Home, the sidebar and Memory Model.
+## v1.4.0
+
+### New
+- **Release mode.** `Use agent-coordinator. Release v1.2.0.` collects what changed since the last tag, writes the
+  `CHANGELOG.md` entry for your users (with an Upgrading section when needed), and tags it. A new release workflow
+  template creates the GitHub Release with that section as its notes. This repo's own releases now work the same way.
+- **Research import.** `Use agent-coordinator. Import research:` + a deep-research report. Claims are filed as
+  unverified with their sources; contradictions of confirmed facts are flagged, not filed; the claims the next
+  milestone needs go into a verify prompt for the coding agent.
+- **Copyright guard.** `check-safe-to-publish.py`, a pre-commit hook and a CI workflow block ROMs, disc images,
+  console executables, saves, emulator states and binaries over 5 MB, with plain-English fixes. Exceptions go in
+  `.publish-allowlist`.
+- **Version-aware facts.** Confirmed findings are stamped with the tool versions they were proven on
+  (`[confirmed @ m3-p1 | xenia-canary=1.2.3]`). `check-research.py` lists facts proven on older versions when the
+  Tool versions table changes, and Claude adds re-checking them to the next prompt.
+- **Decisions log** (`docs/DECISIONS.md`): decided, rejected, why, revisit-if. Settled questions stay settled.
+- **Research index** (`docs/research/INDEX.md`): one line per topic, checked for dead links.
+- **Lessons become rules.** A lesson hit twice gets `(x2)`; the handoff checker flags it for promotion into
+  `AGENTS.md`, a check script or the prompt template.
+- **Report and prompt linters.** `check-report.py` (first step of every review) and `check-prompt.py` (before every
+  prompt goes out).
+- **Agent profiles** in `templates/agents/` for Antigravity, Codex, Claude Code and Cursor, plus a generic one. Each
+  fact is labeled confirmed or unverified. Antigravity's rules loading is confirmed against its docs.
+- **Skill tests.** `tests/test_scripts.py` (25 tests across every script), `detect-mode.py` implementing the skill's
+  mode table, a validator check that every file a skill mentions exists, and `tests/SCENARIOS.md`, a 12-row
+  checklist for testing skill behavior in a live chat.
+
+### Changed
+- `agent-coordinator`: new Release and Research import modes; kickoff scaffolds the decisions log, research index,
+  check scripts, hook and workflows; adopt runs the copyright guard and indexes existing research; reviews start
+  with `check-report.py` and `check-research.py`. Mode details moved into `reference/` files to keep the skill short.
+- `project-handoff`: stamps, index lines and decisions as part of saving findings; runs `check-research.py` when
+  versions change; promotes repeated lessons.
+- Release zips now bundle the `templates/` folder inside each skill, so Claude can copy templates into a project
+  without fetching anything.
+- `AGENTS.md`, `PROMPT.md`, `REPORT.md` and `HANDOFF.md` templates: index-first lookups, stamping, decisions,
+  `check-report.py` before reporting.
+- README: "Why I built this" section on the neural-network inspiration; "Built for the long haul" section; full
+  command table. Wiki: new **Inspiration** and **Long-Haul Tools** pages; Memory Model gains a staleness section.
+
+### Upgrading
+- Re-upload both skill zips (or replace both folders in `~/.claude/skills/`).
+- Existing projects: `Use agent-coordinator. Adopt my existing project.` adds the new files without touching yours.
+  Install the hook with `cp scripts/hooks/pre-commit .git/hooks/pre-commit`.
 
 ## v1.3.0
 - **`AGENTS.md`: the agent's standing rules.** New template. Holds the always/never rules, the tool-versions rule,

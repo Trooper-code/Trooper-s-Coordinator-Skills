@@ -2,7 +2,8 @@
 
 <!-- Copy to docs/HANDOFF.md. Keep it under ~100 lines / 10 KB: it's the current state and the next step,
      not history. Dated progress goes in MILESTONES.md; findings go in the research docs; agent reports go in
-     docs/reports/. Check it with: python scripts/check-handoff.py -->
+     docs/reports/; decisions go in DECISIONS.md. Check it with: python scripts/check-handoff.py
+     A lesson hit twice gets "(x2)" at the end of its line; the checker then says to turn it into a rule. -->
 
 ## Setup
 | What | Where |
@@ -18,7 +19,7 @@
 
 ## How it works now
 <Short summary of the current working state. What's confirmed, and which tag holds it.
-Full details: `docs/research/<topic>.md`.>
+Full details: `docs/research/INDEX.md`. Key decisions: `docs/DECISIONS.md`.>
 
 ## Where it stops
 <Latest real test result, and the exact log/capture that shows it.>

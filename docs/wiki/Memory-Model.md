@@ -105,6 +105,15 @@ biggest context consumers, so they run in the agent's context, not Claude's. Cla
 **summary** and spot-checks it. The budget rule (~10 tool calls of new tracing, then hand it off) is a hard cap
 on how much of Claude's context a review can use.
 
+## Staleness: knowing when a memory expires
+Neural memory can't tell when what it learned has stopped being true. This memory can:
+- **Version-aware stamps:** confirmed facts record the tool versions they were proven on. `check-research.py`
+  flags them when those versions change, so stale facts get re-checked instead of trusted.
+- **The research index** is the external memory's address table: every topic has exactly one address, and dead
+  addresses fail a check.
+- **The decisions log** keeps *why* alongside *what*, so a later step doesn't undo a choice whose reasons it can't
+  see.
+
 ## Truth labels: stopping error propagation
 
 In a recurrent network, an error in the hidden state carries into every later step. Agent workflows have the same

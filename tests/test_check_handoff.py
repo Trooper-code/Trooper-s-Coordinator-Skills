@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for templates/scripts/check-handoff.py. Runs in CI; run locally with: python scripts/test_check_handoff.py
+"""Tests for templates/scripts/check-handoff.py. Runs in CI; run locally with: python tests/test_check_handoff.py
 
 Builds throwaway repos in a temp folder and checks that a good handoff passes and each kind of problem is caught.
 """
@@ -59,6 +59,8 @@ cases = [
     ("pasted summary with its own headings passes",
      GOOD.replace("[Paste Antigravity's latest summary here]",
                   "**Antigravity's M1 summary (unreviewed):**\n## What changed\n- stuff"), True, 0, "OK"),
+    ("repeated lesson prints a promote note", GOOD.replace("## Lessons\n- x", "## Lessons\n- tests wrote real logs (x2)"),
+     True, 0, "promote it to a rule"),
     ("no summary line", GOOD.replace("[Paste Antigravity's latest summary here]", ""), True, 1, "agent-summary line"),
 ]
 failed = 0

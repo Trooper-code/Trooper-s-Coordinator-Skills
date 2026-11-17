@@ -6,5 +6,6 @@
 - [[Reviewing Agent Work]]
 - [[Session Handoffs]]
 - [[Agent Rules and Reports]]
+- [[Long-Haul Tools]]
 - [[Memory Model]]
 - [[Tips and FAQ]]

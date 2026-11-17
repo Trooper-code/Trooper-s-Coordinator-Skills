@@ -1,0 +1,26 @@
+# Copy to .github/workflows/checks.yml in your project.
+# Runs the coordinator workflow's checks on every push and pull request:
+#   - nothing copyrighted or oversized is committed (blocks the push)
+#   - HANDOFF.md is within budget and its paths exist (blocks the push)
+#   - research facts proven on older tool versions, and the research index (report only)
+name: Checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Safe to publish
+        run: python scripts/check-safe-to-publish.py
+      - name: Handoff
+        run: |
+          if [ -f docs/HANDOFF.md ]; then python scripts/check-handoff.py; else echo "No docs/HANDOFF.md yet."; fi
+      - name: Research (report only)
+        run: python scripts/check-research.py --warn-only

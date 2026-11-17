@@ -20,7 +20,8 @@
 |---------|--------|----------|
 | <claim> | confirmed / unverified / wrong | <file, address/offset, log, capture or test> |
 
-Written to: `<docs/research/... section>`
+Written to: `<docs/research/... section>` (confirmed findings stamped `[confirmed @ <branch> | tool=version]`,
+new sections added to `docs/research/INDEX.md`)
 
 ## Tests
 ```

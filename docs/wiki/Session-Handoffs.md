@@ -48,3 +48,8 @@ Since v1.3.0 the agent commits its report to `docs/reports/` on its branch, so s
 needs the summary pasted: the new chat reads the report from the branch. If the new chat can read your repo, you
 don't even paste `HANDOFF.md`, just say `Read docs/HANDOFF.md and do its "First thing to do"`. Pasting the summary
 still works if your agent can't commit.
+
+## Lessons that keep coming back
+A lesson hit a second time gets `(x2)` at the end of its line. The checker prints a note, and Claude promotes the
+lesson into `AGENTS.md`, a check script or the prompt template, then removes it from the handoff. See
+[[Long-Haul Tools]].

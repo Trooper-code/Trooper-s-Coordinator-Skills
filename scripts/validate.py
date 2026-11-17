@@ -65,10 +65,23 @@ for d in skill_dirs:
     elif re.search(r"[<>]", desc):
         fail(f, "description contains < or >, which skill uploads reject")
 
+# 1b. Every templates/... or reference/... path a skill mentions must exist, so a skill never points Claude at a
+#     file that isn't there. (templates/ resolves from the repo root; reference/ from the skill's own folder.)
+for d in skill_dirs:
+    f = d / "SKILL.md"
+    if not f.exists():
+        continue
+    for ref in sorted(set(re.findall(r"`((?:templates|reference)/[^`\s<>]*?)`", f.read_text(encoding="utf-8")))):
+        base = ROOT if ref.startswith("templates/") else d
+        if not (base / ref.rstrip("/")).exists():
+            fail(f, f"mentions `{ref}`, which doesn't exist. Create it or fix the path")
+
 # 2. Relative Markdown links
 link_re = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+# Example links in templates that only make sense inside a user's project.
+SKIP_LINKS = {ROOT / "templates" / "research" / "INDEX.md"}
 for md in ROOT.rglob("*.md"):
-    if ".git" in md.parts:
+    if ".git" in md.parts or md in SKIP_LINKS:
         continue
     text = md.read_text(encoding="utf-8")
     text = re.sub(r"```.*?```", "", text, flags=re.S)  # ignore code blocks
