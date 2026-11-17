@@ -11,7 +11,8 @@ Modes (the same table as the agent-coordinator skill):
   adopt    - the repo has code or docs but no HANDOFF.md: scan it and add only what's missing
   kickoff  - the repo is empty, or holds only the files GitHub creates (README, LICENSE, .gitignore)
 
-It also lists the workflow files that exist and the ones that are missing, plus any existing agent rules files and
+It also finds the check scripts' folder (scripts/ at the repo root, or docs/scripts/), and lists the workflow files
+that exist and the ones that are missing, plus any existing agent rules files and
 planning notes it found. That's the inventory step of "adopt", done without spending tool calls on it.
 
 Exit code 0 always (it reports; it doesn't judge). Only uses the Python standard library.
@@ -42,6 +43,7 @@ WORKFLOW_FILES = [
     ".github/workflows/release.yml",
     "CHANGELOG.md",
 ]
+SCRIPT_DIRS = ["scripts", "docs/scripts"]
 RULES_FILES = ["AGENTS.md", "CLAUDE.md", "GEMINI.md", ".cursorrules", ".cursor/rules",
                ".github/copilot-instructions.md", ".agent/rules", ".windsurfrules"]
 NOTES_FILES = ["RESEARCH.md", "NOTES.md", "TODO.md", "ROADMAP.md", "CHANGELOG.md", "CONTRIBUTING.md", "docs"]
@@ -61,12 +63,25 @@ def detect(repo: Path) -> dict:
         mode = "adopt"
     else:
         mode = "kickoff"
-    exists = lambda rel: (repo / rel.rstrip("/")).exists()  # noqa: E731
+    # The check scripts may live in scripts/ (repo root) or docs/scripts/. Use whichever the repo already has;
+    # a repo with neither gets scripts/.
+    scripts_dir = next((d for d in SCRIPT_DIRS if any((repo / d).glob("check-*.py"))),
+                       next((d for d in SCRIPT_DIRS if (repo / d).is_dir()), SCRIPT_DIRS[0]))
+
+    def exists(rel: str) -> bool:
+        if rel.startswith("scripts/"):
+            rel = scripts_dir + rel[len("scripts"):]
+        return (repo / rel.rstrip("/")).exists()
+
+    def shown(rel: str) -> str:
+        return scripts_dir + rel[len("scripts"):] if rel.startswith("scripts/") else rel
+
     return {
         "mode": mode,
         "files": len(files),
-        "have": [f for f in WORKFLOW_FILES if exists(f)],
-        "missing": [f for f in WORKFLOW_FILES if not exists(f)],
+        "scripts_dir": scripts_dir,
+        "have": [shown(f) for f in WORKFLOW_FILES if exists(f)],
+        "missing": [shown(f) for f in WORKFLOW_FILES if not exists(f)],
         "rules_files": [f for f in RULES_FILES if exists(f)],
         "notes": [f for f in NOTES_FILES if exists(f)],
     }
@@ -86,6 +101,7 @@ def main() -> int:
            "adopt": "it has code or docs but no docs/HANDOFF.md",
            "kickoff": "it's empty apart from starter files"}[r["mode"]]
     print(f"Mode: {r['mode']} ({why})")
+    print(f"Scripts folder: {r['scripts_dir']}/")
     print(f"Workflow files present: {', '.join(r['have']) or 'none'}")
     print(f"Workflow files missing: {', '.join(r['missing']) or 'none'}")
     if r["rules_files"]:

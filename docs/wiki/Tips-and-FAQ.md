@@ -61,3 +61,14 @@ Add its path to `.publish-allowlist` with a comment saying what it is, e.g.
 **How do I test changes to the skills themselves?**
 The scripts have automated tests. For what a skill makes Claude do, walk through the matching rows of
 `tests/SCENARIOS.md` in a fresh chat.
+
+**Where do the check scripts go: `scripts/` or `docs/scripts/`?**
+Either. `scripts/` at the repo root is the default; use `docs/scripts/` if you'd rather keep all the workflow files
+under `docs/`. Claude, the pre-commit hook and both workflow templates look in both and use whichever your project
+has. Keep all the scripts in one of them, not split between the two. The full layout is in the README under
+"Where everything goes".
+
+**Where do the skills themselves go?**
+- Claude apps: upload each zip from the latest release in **Customize → Skills**.
+- Claude Code: `~/.claude/skills/<skill>/` for all projects (`%USERPROFILE%\.claude\skills\` on Windows), or
+  `<project>/.claude/skills/<skill>/` for one.

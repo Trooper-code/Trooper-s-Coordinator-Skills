@@ -104,7 +104,8 @@ prints a note for it, and Claude promotes it:
 Then it's removed from Lessons. Lessons stay a short list of new traps, not a growing pile of old ones.
 
 ## The check scripts
-All in [`templates/scripts/`](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/blob/main/templates/scripts). They need Python 3.9 or newer and nothing else.
+They go in your project's `scripts/` folder, or `docs/scripts/` if you prefer: Claude, the hook and the workflows
+look in both. All in [`templates/scripts/`](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/blob/main/templates/scripts). They need Python 3.9 or newer and nothing else.
 
 | Script | When | Catches |
 |--------|------|---------|

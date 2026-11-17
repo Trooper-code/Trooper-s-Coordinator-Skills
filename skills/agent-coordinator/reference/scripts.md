@@ -1,6 +1,8 @@
 # The check scripts
 
-Copied into each project's `scripts/` folder from `templates/scripts/`. All of them use only the Python standard
+Copied into each project's `scripts/` folder (repo root) or `docs/scripts/` from `templates/scripts/`. Look in both
+before copying, use whichever the project already has, and read every `scripts/...` path here as that folder.
+The pre-commit hook and the workflow templates find the scripts in either place. All of them use only the Python standard
 library, explain each problem in plain English with how to fix it, and exit 1 when something needs fixing.
 
 | Script | Run it | What it catches |

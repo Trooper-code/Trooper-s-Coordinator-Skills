@@ -18,6 +18,11 @@ go to the agent as a prompt.
 or `templates/` in https://github.com/Trooper-code/Trooper-s-Coordinator-Skills. Detail for some modes is in this
 skill's `reference/` folder; read that file when the mode comes up.
 
+**Where the scripts live.** A project keeps its check scripts in `scripts/` at the repo root, **or** in
+`docs/scripts/`. Always look in both (`detect-mode.py` reports which). Every `scripts/...` path in this skill means
+whichever folder the project uses. New projects get `scripts/` unless the user asks for `docs/scripts/`. Never move
+a project's existing scripts.
+
 ## Pick the mode
 | The user says / the repo has | Mode |
 |------------------------------|------|
@@ -50,10 +55,11 @@ E.g. `/agent-coordinator Start a new project: <name>. Repo: <url or folder>. Goa
    - `AGENTS.md`, with the agent-specific section filled in (see "The agent's rules file").
    - `docs/MILESTONES.md`, `docs/HANDOFF.md` (with **Tool versions**), `docs/DECISIONS.md`,
      `docs/research/INDEX.md`, `docs/prompts/`, `docs/reports/TEMPLATE.md`, `CHANGELOG.md`.
-   - `scripts/`: the check scripts (see `reference/scripts.md`).
+   - `scripts/` (or `docs/scripts/`, if the user prefers): the check scripts (see `reference/scripts.md`).
    - Safety and releases: `templates/hooks/pre-commit` copied to `scripts/hooks/pre-commit` (hooks themselves
-     aren't committed, so the user installs it once with `cp scripts/hooks/pre-commit .git/hooks/pre-commit`), plus
-     `.github/workflows/checks.yml` and `.github/workflows/release.yml`.
+     aren't committed, so the user installs it once with `cp scripts/hooks/pre-commit .git/hooks/pre-commit`,
+     or the `docs/scripts/...` path), plus `.github/workflows/checks.yml` and `.github/workflows/release.yml`.
+     The hook and workflows find the scripts in either folder.
 4. **Write the first prompt** for M1 to `docs/prompts/M1-<slug>.md` and run `check-prompt.py` on it. If M1 is pure
    research, the agent's job is to fill `docs/research/`, not to write code.
 5. **Commit** the scaffolding with a clear message.
@@ -71,6 +77,7 @@ docs and repo structure, not investigating code**: anything that needs tracing g
    - top-level layout, build files and test setup (language, how it builds and tests, **which tool versions**);
    - `README`, everything under `docs/`, `RESEARCH.md`, `NOTES.md`, `TODO.md`, `ROADMAP.md`, `CHANGELOG.md`;
    - existing agent rules files (`AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursor/rules/`, `.agents/rules/`);
+   - **both** `scripts/` and `docs/scripts/`: which check scripts the project already has, and where;
    - `git log --oneline -30`, branches and tags: what was done last, what's half-finished;
    - TODO/FIXME comments, if cheap to list (`git grep -n "TODO\|FIXME"`).
 3. **Inventory.** Map what exists onto the workflow's files. Reuse what does the job: link an existing roadmap from

@@ -23,6 +23,8 @@ line of HANDOFF.md, so it holds the current state and the next step, not history
 - `scripts/check-handoff.py` — checks HANDOFF.md's size, sections, ending and paths, and notes lessons to promote.
 - `scripts/check-research.py` — lists confirmed facts proven on older tool versions, and broken index entries.
   Copy either script from the templates if it's missing.
+- **Where the scripts live:** `scripts/` at the repo root, or `docs/scripts/`. Check both; every `scripts/...` path
+  below means whichever folder the project uses.
 
 Starter templates: `templates/` in https://github.com/Trooper-code/Trooper-s-Coordinator-Skills
 
