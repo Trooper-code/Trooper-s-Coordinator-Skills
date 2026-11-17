@@ -48,6 +48,7 @@ whole workflow, how to write good prompts, how to review agent work, and the han
 skills/
   agent-coordinator/SKILL.md
   project-handoff/SKILL.md
+docs/wiki/         source of the wiki pages
 templates/
   HANDOFF.md      -> docs/HANDOFF.md
   MILESTONES.md   -> docs/MILESTONES.md
