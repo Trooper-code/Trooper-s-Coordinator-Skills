@@ -1,5 +1,6 @@
 **Trooper's Coordinator Skills**
 - [[Home]]
+- [[Inspiration]]
 - [[The Workflow]]
 - [[Writing Agent Prompts]]
 - [[Reviewing Agent Work]]

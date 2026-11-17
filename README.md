@@ -12,6 +12,40 @@ heavy work. They keep context small, cut token use, and make sure nothing you le
 - **The repo is the memory.** Findings, status, agent reports and the next step live in committed docs, so any new
   chat can pick up from one small file.
 
+## Why I built this: memory, the way neural networks do it
+
+This started from a problem every long AI project hits: **chats forget.** The longer a chat runs, the slower and
+pricier it gets, and the more it loses track of things said early on. Starting a new chat fixes the cost but
+throws away everything it learned. With two agents it's worse, because neither one sees what the other knows.
+
+Then I noticed something about the models themselves: **their weights never change while you use them.** Claude
+and Gemini don't learn your project. Anything they "know" about it has to be loaded into the chat every time. So
+the real question wasn't how to make the model remember, but **where the memory should live, and how it should
+work.**
+
+Neural networks already have good answers to that question, so I borrowed them:
+
+| How neural networks handle memory | How this workflow does it |
+|-----------------------------------|---------------------------|
+| A **recurrent network (RNN)** processes a sequence one step at a time, passing a small *hidden state* to the next step. | Each chat is one step. `docs/HANDOFF.md` is the hidden state: small, current, and handed to the next chat. |
+| An **LSTM** uses *gates* to decide what to forget, what to write, and what to pass on. | The handoff rules: a size budget and pruning (forget), findings written to the research docs first (write), and "First thing to do" / "Read first" lists (pass on). |
+| **Memory-augmented networks** (Neural Turing Machines, RAG) keep a large *external memory* the model reads and writes through addresses. | The research docs, milestone board and agent reports are the external memory. HANDOFF.md and prompts point to exact sections instead of copying them. |
+| An error in a hidden state **carries forward** into every later step. | Every finding is labeled **confirmed / unverified / wrong** with evidence, so a bad "fact" gets caught instead of spreading. |
+
+**Why this helps agentic work:**
+- **Cheaper.** A chat re-reads its whole context every turn, so cost grows with the *square* of its length. Many
+  short chats linked by a small handoff cost far less than one long one.
+- **Two agents, one memory.** Claude and the coding agent read and write the same repo docs, so neither has to
+  be told what the other found.
+- **Nothing is lost.** Every finding is committed. A new chat, a different model, or a stranger forking the repo
+  starts from the same memory.
+- **Better than neural memory in one way:** it's plain text. You can read it, check it, fix it, and roll it back
+  with git. A network's memory is millions of numbers nobody can read.
+
+The full technical version, with the gate mapping and the token math, is on the
+[Memory Model](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/wiki/Memory-Model) wiki page. The
+story behind it is on [Inspiration](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/wiki/Inspiration).
+
 ## The skills
 
 | Skill | What it does |

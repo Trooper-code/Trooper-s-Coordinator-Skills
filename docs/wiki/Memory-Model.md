@@ -1,5 +1,7 @@
 # Memory Model
 
+*The story behind this page, in plain English: [[Inspiration]].*
+
 The model's weights never change. Claude doesn't "learn" your project, and neither does Gemini. Every bit of
 project memory lives in the repo, and each chat **loads** it. This page explains how that memory is laid out and
 why, using the closest match from machine learning: recurrent and memory-augmented neural networks.

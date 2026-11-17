@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- README: new "Why I built this" section near the top: how neural-network memory (RNN hidden state, LSTM gates,
+  external memory, error propagation) inspired the workflow, and why it helps agentic work.
+- Wiki: new **Inspiration** page with the full story; linked from Home, the sidebar and Memory Model.
+
 ## v1.3.0
 - **`AGENTS.md`: the agent's standing rules.** New template. Holds the always/never rules, the tool-versions rule,
   stop conditions and the report format, so prompts only carry task-specific constraints. Kickoff and adopt create
