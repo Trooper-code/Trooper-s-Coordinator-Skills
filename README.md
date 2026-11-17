@@ -55,13 +55,19 @@ purpose and start the next one from `docs/HANDOFF.md`.
 
 ```mermaid
 flowchart TD
-    O["Old chat"] -->|"1. you say: update the handoff"| R[("Repo docs<br/>HANDOFF.md committed")]
-    O -->|"2. what to run + the agent's prompt line"| Y["You"]
-    Y -->|"3. paste the prompt line"| A["Coding agent"]
-    A -->|"4. works on its branch, writes findings"| R
-    A -->|"5. summary"| Y
-    Y -->|"6. paste HANDOFF.md + summary"| N["New chat"]
-    R -->|"7. reads the docs HANDOFF.md points to"| N
+    S1["1. In the old chat, you say: update the handoff"]
+    S2["2. Claude writes new findings to the docs, rewrites HANDOFF.md,<br/>writes the agent's next prompt, and commits"]
+    S3["3. You run anything Claude asked for: logs, captures, tests"]
+    S4["4. You give the coding agent its one-line prompt"]
+    S5["5. The agent works on its branch and sends back a summary"]
+    Q{"6. Where do you paste the summary?"}
+    N1["New chat: paste HANDOFF.md and replace its last line<br/>with the summary"]
+    O1["Old chat: Claude adds the summary to HANDOFF.md, commits,<br/>and gives you a one-line starter for the new chat"]
+    O2["New chat: paste the starter. Claude reads HANDOFF.md<br/>from the repo itself"]
+    S7["7. The new chat follows 'First thing to do':<br/>review the agent's branch, test steps, merge or next prompt"]
+    S1 --> S2 --> S3 --> S4 --> S5 --> Q
+    Q -->|"in the new chat"| N1 --> S7
+    Q -->|"shortcut: in the old chat"| O1 --> O2 --> S7
 ```
 
 **When to hand off**
