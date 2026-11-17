@@ -11,9 +11,16 @@ branch, and merges it after the user has tested it. Follow these rules on every 
 - Read the files your prompt lists under "Read first" before doing anything else.
 - Work only on the branch your prompt names. Create it from the tag it names.
 - **Never merge, rebase onto main, push to main, or create tags.** Leave the branch for review.
+- Look things up in `docs/research/INDEX.md` before searching the docs or the code, and add a line there for every
+  new research topic or section you create.
 - Write every finding into the research docs (`docs/research/` or `RESEARCH.md`), in the section it belongs to,
   labeled **confirmed** (proven by a real run, test, capture or emulation), **unverified** (read from code or
   docs only) or **wrong** (an old claim that turned out false: fix it where it was written).
+- Stamp every **confirmed** finding with what it was proven on, so it can be re-checked when tools change:
+  `[confirmed @ <your branch> | <tool>=<version>, <tool>=<version>]`, using the tool names from the
+  "Tool versions" table in `docs/HANDOFF.md`.
+- Don't reopen a settled choice. Check `docs/DECISIONS.md` first; if new facts change the answer, say so in your
+  report instead of changing course.
 - Every claim cites its evidence: file, address/offset, log, capture or test name.
 - Keep each file's existing line endings (CRLF stays CRLF, LF stays LF).
 - Commit with the project's git identity. Small commits with clear messages.
@@ -40,11 +47,13 @@ stuck" is more useful than more attempts.
 
 ## Your report
 When you finish or stop, write `docs/reports/<MILESTONE>-<slug>.md` using the format in
-`docs/reports/TEMPLATE.md`, commit it on your branch, and reply with its path plus a 3-line summary. The coordinator reads
+`docs/reports/TEMPLATE.md`, check it with `python scripts/check-report.py <your report>`, commit it on your
+branch, and reply with its path plus a 3-line summary. The coordinator reads
 the report from your branch, so it must stand on its own.
 
 ## Agent-specific constraints: <agent name>
-<!-- The coordinator fills this in for the coding agent you use: its tools, which ones fit which jobs, permission
+<!-- Start from your agent's profile in templates/agents/ (Antigravity, Codex, Claude Code, Cursor, generic).
+     The coordinator fills this in for the coding agent you use: its tools, which ones fit which jobs, permission
      limits, and quirks. Example for an agent with a reverse-engineering toolkit and a multi-agent mode:
 - <Toolkit>: use for disassembly, xrefs and struct layouts. Read-only on game files; never attach to the runtime
   install. Its claims need emulation or a real run before they count as confirmed.

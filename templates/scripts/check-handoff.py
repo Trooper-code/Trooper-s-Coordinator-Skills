@@ -12,6 +12,8 @@ It checks that:
   3. it ends with the agent-summary line (the placeholder, a pasted summary, or a report path);
   4. every repo path it mentions in backticks or links actually exists, so pointers to the research docs,
      prompts and reports aren't stale. Paths with <placeholders> or wildcards are skipped.
+  5. (a note, not a failure) lessons marked "(x2)" or more have been hit twice, so they should become a rule in
+     AGENTS.md or a check script instead of staying a lesson.
 
 Exit code 0 = good, 1 = something to fix. Each problem says how to fix it.
 Only uses the Python standard library.
@@ -104,7 +106,21 @@ def main() -> int:
                 f"points to `{c}`, which doesn't exist. Fix the path, or write that file/section first."
             )
 
+    # 5. Lessons seen twice or more should become rules (a warning, not a failure).
+    #    Mark a repeat by adding "(x2)", "(x3)"... to the end of the lesson's line.
+    promote = []
+    in_lessons = False
+    for line in lines:
+        if line.startswith("## "):
+            in_lessons = line[3:].strip().lower() == "lessons"
+            continue
+        m = re.search(r"\((?:x|×)\s*(\d+)\)\s*$", line.strip(), re.I) if in_lessons else None
+        if m and int(m.group(1)) >= 2:
+            promote.append(line.strip().lstrip("-* ").strip())
+
     rel = handoff.relative_to(root) if handoff.is_relative_to(root) else handoff
+    for lesson in promote:
+        print(f"Note: lesson seen again, promote it to a rule in AGENTS.md or a check script: {lesson}")
     if problems:
         print(f"{rel}: {len(problems)} problem(s)")
         for p in problems:

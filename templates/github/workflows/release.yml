@@ -1,0 +1,32 @@
+# Copy to .github/workflows/release.yml in your project.
+# When you push a tag like v1.2.0, this creates the GitHub Release with that version's section of CHANGELOG.md as
+# its notes, so you never write release notes by hand. If there's no section for the tag, it fails and says how
+# to add one.
+#
+# Attach files to the release by adding a build step that puts them in dist/ (e.g. your portable .exe).
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Notes from CHANGELOG.md
+        run: python scripts/release-notes.py "${GITHUB_REF_NAME}" > notes.md
+      # - name: Build
+      #   run: <your build command, putting the files to attach in dist/>
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          gh release create "${GITHUB_REF_NAME}" dist/* --title "${GITHUB_REF_NAME}" --notes-file notes.md

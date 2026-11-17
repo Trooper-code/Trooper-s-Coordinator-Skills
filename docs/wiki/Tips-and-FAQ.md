@@ -45,3 +45,19 @@ app's tools, limits and quirks. Everything else stays the same.
 
 **Is there a quick way to see where a project is?**
 `Use agent-coordinator. Status.` It reads two files and answers in about five lines.
+
+**What Python do the scripts need?**
+Python 3.9 or newer, standard library only, so there's nothing to `pip install`. On Windows, `python` from
+python.org or the Microsoft Store works.
+
+**Does the pre-commit hook work on Windows?**
+Yes. Git for Windows runs hooks with its own shell, from PowerShell, cmd and GUI clients alike. Python must be on
+your PATH. To skip it once on purpose: `git commit --no-verify`, though CI still checks on push.
+
+**The copyright guard flagged a file I made myself.**
+Add its path to `.publish-allowlist` with a comment saying what it is, e.g.
+`tests/fixtures/tiny.sav  # 64 bytes, made by hand for the parser test`.
+
+**How do I test changes to the skills themselves?**
+The scripts have automated tests. For what a skill makes Claude do, walk through the matching rows of
+`tests/SCENARIOS.md` in a fresh chat.

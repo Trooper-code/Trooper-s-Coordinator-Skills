@@ -11,7 +11,7 @@ gets read even by an agent that doesn't load it on its own.
 
 | Section | What it says |
 |---------|--------------|
-| Always | Work only on the named branch; label findings confirmed / unverified / wrong with evidence; keep line endings; commit with the project's identity. |
+| Always | Work only on the named branch; look things up in the research index first; label findings confirmed / unverified / wrong with evidence, and **stamp** confirmed ones with the tool versions; don't reopen settled decisions; keep line endings. |
 | Never | Merge, rebase onto main or tag; commit copyrighted or third-party files; touch real user data, logs, saves or ports in tests. |
 | Tool versions | Record the versions you used; flag any that differ from `HANDOFF.md`. |
 | Stop and report | 3 failed attempts, missing access, contradicts a confirmed fact, task much bigger than expected. |
@@ -19,6 +19,10 @@ gets read even by an agent that doesn't load it on its own.
 | Agent-specific constraints | Written by Claude for the agent *you* use (see below). |
 
 ### Agent-specific constraints
+Ready-made profiles for Antigravity, Codex, Claude Code and Cursor live in
+[`templates/agents/`](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/tree/main/templates/agents), each
+fact labeled confirmed or unverified. Claude starts from the profile for your agent, then asks which tools you have.
+
 When you name your coding agent (at kickoff, when adopting a project, or when you switch agents), Claude fills in
 `## Agent-specific constraints: <agent>`. It covers:
 
@@ -40,7 +44,8 @@ task-specific constraints. They're shorter, and a rule can't be left out of one 
 Template: [`templates/REPORT.md`](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/blob/main/templates/REPORT.md), copied into your project as
 `docs/reports/TEMPLATE.md`.
 
-The agent writes `docs/reports/<MILESTONE>-<slug>.md` and commits it **on its branch**:
+The agent writes `docs/reports/<MILESTONE>-<slug>.md`, checks it with `check-report.py`, and commits it **on its
+branch**:
 
 | Section | Why Claude needs it |
 |---------|---------------------|
