@@ -23,23 +23,88 @@ They work on their own, but they're built to be used together.
 
 ## How it works
 
+The workflow has two loops: the **work loop** inside one chat, and the **handoff** that carries everything into
+the next chat.
+
+### Inside a session: the work loop
+
 ```mermaid
-flowchart LR
-    U["You<br/>(tester)"] -->|goal| C["Claude<br/>(coordinator)"]
-    C -->|"docs/prompts/*.md"| A["Coding agent<br/>(worker)"]
-    A -->|"branch + summary"| C
-    C -->|test steps| U
-    U -->|"works / doesn't"| C
-    C -->|"merge + tag"| R[("Repo docs<br/>(memory)")]
-    A -->|findings| R
-    R -->|"HANDOFF.md"| C
+flowchart TD
+    U["You (tester)"] -->|"1. goal"| C["Claude (coordinator)"]
+    C -->|"2. prompt in docs/prompts/"| A["Coding agent (worker)"]
+    A -->|"3. branch + summary"| C
+    C -->|"4. test steps"| U
+    U -->|"5. works / doesn't"| C
+    C -->|"6. merge + tag, or follow-up prompt"| R[("Repo docs")]
+    A -->|"findings"| R
 ```
 
-1. Claude breaks the goal into milestones and writes a prompt to `docs/prompts/`.
-2. The agent works on its own branch, writes findings into the docs, and reports back. **It never merges.**
-3. Claude re-runs the tests, spot-checks the agent's claims against the real files, and gives you test steps.
-4. It works → Claude merges and tags it. It doesn't → Claude writes the follow-up prompt.
-5. When the chat gets long, Claude updates `docs/HANDOFF.md` and you start a fresh chat from it.
+1. You give Claude the goal. Claude splits it into milestones in `docs/MILESTONES.md`.
+2. Claude writes a self-contained prompt to `docs/prompts/<MILESTONE>-<slug>.md` and gives you one line to paste
+   into the agent.
+3. The agent works on its own branch, writes findings into the docs, and sends back a summary. **It never merges.**
+4. You paste the summary into Claude. Claude re-runs the tests, spot-checks the claims against the real files, and
+   gives you exact test steps.
+5. You test on your machine and report back.
+6. It works → Claude merges and tags it. It doesn't → Claude turns the bugs and gaps into the next prompt.
+
+### Between sessions: the handoff
+
+Chats get slower, pricier and more forgetful as they grow. Instead of keeping one chat alive, you end it on
+purpose and start the next one from `docs/HANDOFF.md`.
+
+```mermaid
+sequenceDiagram
+    participant Y as You
+    participant C1 as Old chat
+    participant R as Repo
+    participant A as Coding agent
+    participant C2 as New chat
+    Y->>C1: "update the handoff"
+    C1->>R: write findings to docs, update MILESTONES.md and HANDOFF.md, commit
+    C1-->>Y: what to run first + one line for the agent
+    Y->>A: "Read and follow docs/prompts/next-step.md"
+    A->>R: work on its branch, write findings
+    A-->>Y: summary
+    Y->>C2: paste HANDOFF.md + the agent's summary
+    C2->>R: read the files HANDOFF.md points to
+    C2-->>Y: review, test steps, next prompt
+```
+
+**When to hand off**
+- At the end of every work session.
+- After each review round (step 6 above), before the agent starts the next prompt.
+- Whenever the chat feels long or slow. Claude should suggest it on its own.
+
+**How to do it**
+1. In the old chat, say **"update the handoff"**. Claude records anything not yet in the docs, rewrites
+   `HANDOFF.md`, and commits. It tells you what to run (logs, captures) and gives you the agent's next prompt line.
+2. Run what it asked for, and give the agent its prompt.
+3. Open a new chat. Paste `docs/HANDOFF.md`, and replace its last line
+   (`[Paste the coding agent's latest summary here]`) with the agent's summary.
+4. The new chat reads the docs `HANDOFF.md` points to, then does its **First thing to do**: usually reviewing
+   that summary.
+
+**Shortcut:** paste the agent's summary into the *old* chat instead. Claude adds it to `HANDOFF.md`, commits, and
+gives you a one-line starter for the new chat, e.g.
+`Continue my project. Read docs/HANDOFF.md and do its "First thing to do".` If the new chat can read your repo
+(Claude Code, or a connected folder), you don't paste the file at all.
+
+**What's in `HANDOFF.md`** (template: [`templates/HANDOFF.md`](templates/HANDOFF.md))
+
+| Section | What the new chat gets from it |
+|---------|--------------------------------|
+| Setup | Tools, versions, and where every folder is |
+| How it works now | The current confirmed state, and which tag holds it |
+| Where it stops | The latest real test result and the log that shows it |
+| In progress | Who's doing what: prompt path and branch |
+| Rules | Project constraints, one line each |
+| First thing to do | Exact steps to start with, so the chat doesn't have to guess |
+| Lessons | Traps already hit, so they aren't hit again |
+| Agent summary | The input for this step: what the agent did since the last chat |
+
+It stays around **100 lines**. History goes in `MILESTONES.md`, findings go in the research docs, and
+`HANDOFF.md` only points to them. A small handoff makes a new chat cheap to start.
 
 ## The memory model
 
