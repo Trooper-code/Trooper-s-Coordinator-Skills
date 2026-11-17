@@ -4,7 +4,7 @@ These two skills set up a two-agent workflow: **Claude coordinates, a second cod
 the repo remembers everything.** The [README](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills#readme) covers installing; this wiki covers how to use them well.
 
 ## Pages
-1. [[The Workflow]]: the roles and the loop, start to finish
+1. [[The Workflow]]: the roles and the loop, starting a new project, and adding it to an existing one
 2. [[Writing Agent Prompts]]: what makes a prompt the agent can run without you
 3. [[Reviewing Agent Work]]: how Claude checks the agent's branch before merging
 4. [[Session Handoffs]]: keeping context small and starting fresh chats with nothing lost

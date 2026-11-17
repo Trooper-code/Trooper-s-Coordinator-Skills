@@ -37,7 +37,7 @@ jobs:
             zip -r "../dist/${name}.zip" "$name"
           done
           cd ..
-          zip -r dist/all-skills-and-templates.zip skills templates LICENSE README.md
+          zip -r dist/all-skills-and-templates.zip skills templates LICENSE README.md CHANGELOG.md
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}

@@ -1,6 +1,6 @@
 ---
 name: agent-coordinator
-description: Use on projects where a separate coding agent (e.g. Antigravity/Gemini, Codex, another Claude) does the research and heavy coding, and when starting a new project with one. Claude kicks the project off, writes the agent's prompts, reviews its branches, merges and tags.
+description: Use on projects where a separate coding agent (e.g. Antigravity/Gemini, Codex, another Claude) does the research and heavy coding, and when starting a new project with one or adding one to an existing project. Claude sets the project up, writes the agent's prompts, reviews its branches, merges and tags.
 ---
 
 # Agent coordinator (Claude as the brain)
@@ -18,8 +18,11 @@ go to the agent as a prompt.
 Run this when the user starts a fresh project, e.g. `/agent-coordinator` in Claude Code, or a message like
 "Start a new project: <name>. Repo: <url or folder>. Goal: <...>. Coding agent: <...>."
 
-If the repo already has `docs/HANDOFF.md`, this is **not** a new project: read HANDOFF.md, the status board and the
-research docs it points to, then do its "First thing to do" instead.
+Pick the mode from what's in the repo:
+- **Has `docs/HANDOFF.md`** → it's already set up. Read HANDOFF.md, the status board and the research docs it points
+  to, then do its "First thing to do".
+- **Has code or docs but no HANDOFF.md** → it's an existing project. Use **Adopting an existing project** below.
+- **Empty, or nothing yet** → follow the kickoff steps here.
 
 1. **Get access.** Ask for the repo (GitHub link or local folder) if you don't have it. On a local folder, also ask
    for delete permission (git creates and removes `.lock` files).
@@ -36,6 +39,44 @@ research docs it points to, then do its "First thing to do" instead.
 5. **Commit** the scaffolding with a clear message.
 6. **Reply briefly:** the milestone list, the one-line instruction to paste into the agent, and "paste its summary
    back here when it's done".
+
+## Adopting an existing project
+Run this when the user adds the workflow to a project that already has code or docs, e.g.
+`/agent-coordinator Adopt my existing project. Repo: <url or folder>. Coding agent: <...>.`
+
+The goal: learn what the project already knows, plan from it, and add only the docs that are missing. The scan is
+**reading docs and repo structure, not investigating code**: anything that needs tracing goes to the agent.
+
+1. **Get access**, as in the kickoff (repo, plus delete permission on a local folder).
+2. **Scan** (budget: about 15–20 tool calls). Read, don't trace:
+   - top-level layout, build files and test setup (what language, how it builds, how tests run);
+   - `README`, everything under `docs/`, and files like `RESEARCH.md`, `NOTES.md`, `TODO.md`, `ROADMAP.md`,
+     `CHANGELOG.md`, `CONTRIBUTING.md`;
+   - `git log --oneline -30`, branches (`git branch -a`) and tags: what was done last, what's half-finished;
+   - open issues and TODO/FIXME comments, if they're cheap to list (`git grep -n "TODO\|FIXME"`).
+3. **Inventory.** Map what exists onto the files this workflow needs:
+   | Needed | Use what's there if it does the job |
+   |--------|--------------------------------------|
+   | `docs/MILESTONES.md` (status board) | an existing roadmap or TODO list: link it, don't copy it |
+   | `docs/research/` or `RESEARCH.md` (findings) | existing notes/research docs: keep them where they are |
+   | `docs/prompts/` (agent prompts) | — |
+   | `docs/HANDOFF.md` (session index) | — |
+   **Create only what's missing. Never overwrite, move or rename the user's files.** Point to them instead.
+4. **Label what you learned.** Facts taken from existing docs or comments are **unverified** until tested or proven.
+   Mark something **confirmed** only with evidence (a passing test, a real run). Note contradictions between docs
+   and code as gaps.
+5. **Plan ahead** from what you found: finish half-done branches, fix failing tests, close TODOs, fill research gaps.
+   Write milestones M1..Mn with done-criteria into `docs/MILESTONES.md`, and a "Next" line. If direction is a real
+   judgment call (rewrite vs. fix, which feature first), ask 1–3 sharp questions before committing to the plan.
+6. **Write the first prompt.** If large parts of the code are undocumented, make it **M0: survey**: the agent maps
+   those areas into `docs/research/`, with every claim cited and marked confirmed or unverified. Otherwise, write
+   the prompt for M1.
+7. **Write `docs/HANDOFF.md`**: setup and folder table, "How it works now" (from the scan, labeled), rules,
+   "First thing to do", and the summary placeholder as the last line.
+8. **Commit** the new docs only, in one commit with a clear message (e.g. "Add coordinator docs"). Keep each existing
+   file's line endings; match the repo's style for new ones.
+9. **Reply briefly:** a short summary of what you learned, the files you created, the milestone plan, anything that
+   needs the user's call, and the one line to paste into the agent.
 
 ## Milestones and branches
 - Break milestone-sized work into milestones. Each gets its own feature branch.

@@ -21,6 +21,8 @@ heavy work. They keep context small, cut token use, and make sure nothing you le
 
 They work on their own, but they're built to be used together.
 
+**New in v1.2.0:** `agent-coordinator` can now [adopt an existing project](#add-it-to-an-existing-project): it scans your docs, plans from what it learns, and adds only the docs that are missing. See the [changelog](CHANGELOG.md).
+
 ## How it works
 
 The workflow has two loops: the **work loop** inside one chat, and the **handoff** that carries everything into
@@ -170,6 +172,37 @@ Claude then:
 
 From there it's the work loop: paste the agent's summary back, test, merge or retry.
 
+### Add it to an existing project
+
+Already have a project with code and docs, but no `HANDOFF.md`? Open a fresh chat and adopt it:
+
+**Claude Code:**
+```
+/agent-coordinator Adopt my existing project. Repo: <GitHub URL or folder>. Coding agent: <Antigravity / Codex / ...>.
+```
+
+**Claude apps:**
+```
+Use agent-coordinator. Adopt my existing project. Repo: <GitHub URL or folder>. Coding agent: <Antigravity / Codex / ...>.
+```
+
+Claude then:
+1. **Scans** your README, `docs/`, notes like `TODO.md` / `ROADMAP.md` / `CHANGELOG.md`, the build and test setup,
+   recent commits, branches and tags. It reads; it doesn't trace code (about 15–20 tool calls).
+2. **Inventories** what you already have against what the workflow needs, and uses your existing files where they
+   fit (an existing roadmap gets linked from `MILESTONES.md`, not copied).
+3. **Creates only the missing files**: `docs/MILESTONES.md`, `docs/HANDOFF.md`, `docs/research/`, `docs/prompts/`.
+   It never overwrites, moves or renames your files.
+4. **Labels what it learned**: anything taken from existing docs is *unverified* until tested.
+5. **Plans ahead** from what it found (half-done branches, failing tests, TODOs, research gaps), asking 1–3 questions
+   only when the direction is a real judgment call.
+6. **Writes the first agent prompt.** If big parts of the code are undocumented, that's an *M0 survey* that has the
+   agent map them into `docs/research/`.
+7. **Commits** the new docs in one commit and gives you a summary, the plan, and the line to paste into your agent.
+
+You don't have to pick the right command: if the repo already has `docs/HANDOFF.md`, either command just continues
+from it.
+
 ### Continue an existing project
 
 Start a fresh chat with your `docs/HANDOFF.md` (see [the handoff](#between-sessions-the-handoff)), or in a chat
@@ -187,6 +220,7 @@ workflow, writing prompts, reviewing agent work, handoffs and the memory model.
 skills/
   agent-coordinator/SKILL.md
   project-handoff/SKILL.md
+CHANGELOG.md        what changed in each release
 templates/
   HANDOFF.md        -> your docs/HANDOFF.md
   MILESTONES.md     -> your docs/MILESTONES.md
