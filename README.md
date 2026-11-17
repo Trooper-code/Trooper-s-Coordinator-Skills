@@ -135,8 +135,9 @@ the wiki.
 ## Install
 
 **Claude apps (claude.ai / desktop / mobile)**: download a skill's `.zip` from the
-[latest release](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/releases/latest) and upload it in
-your skills settings. Do it once per skill.
+[latest release](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/releases/latest), then in Claude go to
+**Customize → Skills → + → Create skill → Upload a skill** and pick the zip. Do it once per skill. Uploaded skills
+are private to your account and turn on right away.
 
 **Claude Code**: copy the folders from `skills/` into `~/.claude/skills/` (all your projects) or
 `<your-project>/.claude/skills/` (one project).
