@@ -9,19 +9,19 @@ heavy work. They keep context small, cut token use, and make sure nothing you le
 - **Claude is the coordinator.** It plans, writes prompts, reviews, merges and tags.
 - **A coding agent does the grunt work**: research, tracing, investigations, big fixes. I use Antigravity with
   Gemini, but any agent that can work on a git branch fits.
-- **The repo is the memory.** Findings, status and the next step live in committed docs, so any new chat can pick
-  up from one small file.
+- **The repo is the memory.** Findings, status, agent reports and the next step live in committed docs, so any new
+  chat can pick up from one small file.
 
 ## The skills
 
 | Skill | What it does |
 |-------|--------------|
-| [`agent-coordinator`](skills/agent-coordinator/SKILL.md) | Makes Claude act as the coordinator: writes self-contained prompts for the coding agent, reviews its branches (bugs → gaps → nitpicks), merges and tags. Keeps Claude out of context-heavy investigations. |
-| [`project-handoff`](skills/project-handoff/SKILL.md) | Ends a session cleanly: writes every finding to the repo docs, rewrites a short `docs/HANDOFF.md`, and commits, so the next chat starts with full context from one small paste. |
+| [`agent-coordinator`](skills/agent-coordinator/SKILL.md) | Makes Claude act as the coordinator: sets up new or existing projects (including an `AGENTS.md` rules file tailored to your coding agent), writes self-contained prompts, reviews the agent's branches and reports (bugs → gaps → nitpicks), merges and tags. Keeps Claude out of context-heavy investigations. |
+| [`project-handoff`](skills/project-handoff/SKILL.md) | Ends a session cleanly: writes every finding to the repo docs, rewrites a short `docs/HANDOFF.md`, checks it with `check-handoff.py`, and commits, so the next chat starts with full context from one small file. |
 
 They work on their own, but they're built to be used together.
 
-**New in v1.2.0:** `agent-coordinator` can now [adopt an existing project](#add-it-to-an-existing-project): it scans your docs, plans from what it learns, and adds only the docs that are missing. See the [changelog](CHANGELOG.md).
+**New in v1.3.0:** the agent follows an [`AGENTS.md` rules file](#agentsmd-the-agents-standing-rules) with a section written for your specific coding agent, commits its [report to the repo](#agent-reports-no-more-pasting) instead of you pasting it, and [stops and reports](#stop-conditions-and-the-abandon-rule) when it's stuck. Plus a tool-versions table, a handoff checker script, a cheap status mode and an abandon rule. See the [changelog](CHANGELOG.md).
 
 ## How it works
 
@@ -34,7 +34,7 @@ the next chat.
 flowchart TD
     U["You (tester)"] -->|"1. goal"| C["Claude (coordinator)"]
     C -->|"2. prompt in docs/prompts/"| A["Coding agent (worker)"]
-    A -->|"3. branch + summary"| C
+    A -->|"3. branch + report in docs/reports/"| C
     C -->|"4. test steps"| U
     U -->|"5. works / doesn't"| C
     C -->|"6. merge + tag, or follow-up prompt"| R[("Repo docs")]
@@ -44,11 +44,13 @@ flowchart TD
 1. You give Claude the goal. Claude splits it into milestones in `docs/MILESTONES.md`.
 2. Claude writes a self-contained prompt to `docs/prompts/<MILESTONE>-<slug>.md` and gives you one line to paste
    into the agent.
-3. The agent works on its own branch, writes findings into the docs, and sends back a summary. **It never merges.**
-4. You paste the summary into Claude. Claude re-runs the tests, spot-checks the claims against the real files, and
-   gives you exact test steps.
+3. The agent follows `AGENTS.md` plus its prompt, works on its own branch, writes findings into the docs, and commits
+   a report to `docs/reports/`. **It never merges.** If it gets stuck, it stops and reports instead of burning quota.
+4. You tell Claude it's done. Claude reads the report from the branch, checks the tool versions, re-runs the tests,
+   spot-checks the claims against the real files, and gives you exact test steps.
 5. You test on your machine and report back.
-6. It works → Claude merges and tags it. It doesn't → Claude turns the bugs and gaps into the next prompt.
+6. It works → Claude merges and tags it. It doesn't → Claude turns the bugs and gaps into the next prompt (or, after
+   two failed rounds, abandons the branch and restarts from the last good tag).
 
 ### Between sessions: the handoff
 
@@ -61,15 +63,14 @@ flowchart TD
     S2["2. Claude writes new findings to the docs, rewrites HANDOFF.md,<br/>writes the agent's next prompt, and commits"]
     S3["3. You run anything Claude asked for: logs, captures, tests"]
     S4["4. You give the coding agent its one-line prompt"]
-    S5["5. The agent works on its branch and sends back a summary"]
-    Q{"6. Where do you paste the summary?"}
-    N1["New chat: paste HANDOFF.md and replace its last line<br/>with the summary"]
-    O1["Old chat: Claude adds the summary to HANDOFF.md, commits,<br/>and gives you a one-line starter for the new chat"]
-    O2["New chat: paste the starter. Claude reads HANDOFF.md<br/>from the repo itself"]
-    S7["7. The new chat follows 'First thing to do':<br/>review the agent's branch, test steps, merge or next prompt"]
+    S5["5. The agent works on its branch and commits its report<br/>to docs/reports/"]
+    Q{"6. Can the new chat read your repo?"}
+    N1["Yes: say 'Read docs/HANDOFF.md and do its<br/>First thing to do'"]
+    O1["No: paste HANDOFF.md into the new chat"]
+    S7["7. The new chat follows 'First thing to do':<br/>read the agent's report, review its branch, test steps,<br/>merge or next prompt"]
     S1 --> S2 --> S3 --> S4 --> S5 --> Q
-    Q -->|"in the new chat"| N1 --> S7
-    Q -->|"shortcut: in the old chat"| O1 --> O2 --> S7
+    Q -->|"Claude Code / connected folder"| N1 --> S7
+    Q -->|"Claude app, no repo access"| O1 --> S7
 ```
 
 **When to hand off**
@@ -79,33 +80,106 @@ flowchart TD
 
 **How to do it**
 1. In the old chat, say **"update the handoff"**. Claude records anything not yet in the docs, rewrites
-   `HANDOFF.md`, and commits. It tells you what to run (logs, captures) and gives you the agent's next prompt line.
+   `HANDOFF.md`, runs `scripts/check-handoff.py` (size, sections, broken paths), and commits. It tells you what to
+   run (logs, captures) and gives you the agent's next prompt line.
 2. Run what it asked for, and give the agent its prompt.
-3. Open a new chat. Paste `docs/HANDOFF.md`, and replace its last line
-   (`[Paste the coding agent's latest summary here]`) with the agent's summary.
-4. The new chat reads the docs `HANDOFF.md` points to, then does its **First thing to do**: usually reviewing
-   that summary.
+3. When the agent is done, open a new chat. If it can read your repo, just say
+   `Continue my project. Read docs/HANDOFF.md and do its "First thing to do".` Otherwise, paste `docs/HANDOFF.md`.
+4. The new chat reads the docs `HANDOFF.md` points to, reads the agent's report from its branch, then does its
+   **First thing to do**: usually reviewing that report.
 
-**Shortcut:** paste the agent's summary into the *old* chat instead. Claude adds it to `HANDOFF.md`, commits, and
-gives you a one-line starter for the new chat, e.g.
-`Continue my project. Read docs/HANDOFF.md and do its "First thing to do".` If the new chat can read your repo
-(Claude Code, or a connected folder), you don't paste the file at all.
+**If your agent can't commit a report** (no git access, say), paste its summary into the old chat instead. Claude
+puts it at the bottom of `HANDOFF.md`, commits, and gives you the one-line starter for the new chat.
 
 **What's in `HANDOFF.md`** (template: [`templates/HANDOFF.md`](templates/HANDOFF.md))
 
 | Section | What the new chat gets from it |
 |---------|--------------------------------|
-| Setup | Tools, versions, and where every folder is |
+| Setup | Tools, the coding agent, and where every folder is |
+| Tool versions | Exact versions the project is pinned to; the agent's report is checked against them |
 | How it works now | The current confirmed state, and which tag holds it |
 | Where it stops | The latest real test result and the log that shows it |
-| In progress | Who's doing what: prompt path and branch |
+| In progress | Who's doing what: prompt path, branch, and where its report will be |
 | Rules | Project constraints, one line each |
 | First thing to do | Exact steps to start with, so the chat doesn't have to guess |
 | Lessons | Traps already hit, so they aren't hit again |
-| Agent summary | The input for this step: what the agent did since the last chat |
+| Agent summary line | A pointer to the agent's report, or its pasted summary if it couldn't commit one |
 
 It stays around **100 lines**. History goes in `MILESTONES.md`, findings go in the research docs, and
 `HANDOFF.md` only points to them. A small handoff makes a new chat cheap to start.
+
+## What keeps the agent on track
+
+### AGENTS.md: the agent's standing rules
+
+Every project gets an `AGENTS.md` at its root (template: [`templates/AGENTS.md`](templates/AGENTS.md)). Most
+coding agents load it automatically at the start of every task, and every prompt also lists it under "Read first",
+so it's read either way. It holds the rules that never change between tasks:
+
+- **Always:** work only on the named branch, label every finding confirmed / unverified / wrong with evidence, keep
+  line endings.
+- **Never:** merge or tag, commit copyrighted or third-party files, or touch real user data, logs or ports in tests.
+- **Tool versions**, **stop conditions** and the **report format** (below).
+- **Agent-specific constraints.** When you name your coding agent, Claude writes a section just for that app:
+  - how it loads rules (if it reads a different file, like `GEMINI.md` or `.cursor/rules/`, Claude adds a pointer
+    there);
+  - which of its tools to use for what;
+  - permission limits for high-privilege tools (e.g. a reverse-engineering toolkit stays read-only on game files);
+  - known quirks.
+  Claude asks which tools you actually have rather than guessing, and marks anything it isn't sure of as unverified.
+
+Because the standing rules live in one file, prompts only carry what's specific to their task. They're shorter, and
+a rule can't be forgotten in one of them.
+
+### Agent reports: no more pasting
+
+When the agent finishes (or stops), it writes `docs/reports/<MILESTONE>-<slug>.md` and commits it on its branch
+(format: [`templates/REPORT.md`](templates/REPORT.md)): status, tool versions, what changed, findings with evidence,
+test output, and open questions. Claude reads it straight from the branch, so you don't copy-paste summaries
+between apps, and the report merges into the repo's history with the branch.
+
+### Stop conditions and the abandon rule
+
+The agent **stops and reports** instead of burning quota when:
+- the same fix has failed 3 times;
+- it needs a file, tool or permission it doesn't have;
+- what it finds contradicts a fact marked confirmed;
+- the task turns out much bigger than the prompt expected.
+
+Each prompt can add its own stop conditions. On review, Claude decides what the agent needs and writes that into
+the next prompt, rather than redoing the work.
+
+When a branch **fails two review rounds** or is heading the wrong way, Claude abandons it instead of patching
+again. It keeps the branch for reference, records why as a lesson, keeps any confirmed findings, and writes a fresh
+prompt from the **last good tag**.
+
+### Tool versions
+
+`HANDOFF.md` has a **Tool versions** table: compiler, SDK, emulator, loaders, mods, whatever a mismatch could break.
+The agent records the versions it used in its report, and Claude checks them first on review. A mismatch is treated
+as a bug until explained. Version mismatches are one of the most common causes of "works on my machine" bugs.
+
+### Handoff checker
+
+[`templates/scripts/check-handoff.py`](templates/scripts/check-handoff.py) goes in your project's `scripts/` folder.
+`project-handoff` runs it before every commit:
+
+```
+python scripts/check-handoff.py
+```
+
+It checks that `HANDOFF.md` is within its size budget (120 lines / 10 KB), has every required section, ends with the
+agent-summary line, and that every repo path it points to exists. Each problem it prints says how to fix it.
+Standard library only, so there's nothing to install.
+
+### Status mode
+
+Back after a week? Ask for a status instead of starting a full session:
+```
+Use agent-coordinator. Status.
+```
+Claude reads only `MILESTONES.md` and `HANDOFF.md` and answers in about five lines: where things stand, who's on
+what, the last test result, and what's next.
 
 ## The memory model
 
@@ -165,12 +239,13 @@ Use agent-coordinator. Start a new project: <name>. Repo: <GitHub URL or folder>
 
 Claude then:
 1. asks for repo access, and 1–3 questions only if the goal is unclear;
-2. scaffolds `docs/MILESTONES.md`, `docs/HANDOFF.md`, `docs/research/` and `docs/prompts/` (from
-   [`templates/`](templates));
-3. plans the milestones and writes the first agent prompt;
-4. commits, and gives you the one line to paste into your coding agent.
+2. asks which tools your coding agent has, and writes `AGENTS.md` with a section for that agent;
+3. scaffolds `docs/MILESTONES.md`, `docs/HANDOFF.md` (with a tool-versions table), `docs/research/`,
+   `docs/prompts/`, `docs/reports/TEMPLATE.md` and `scripts/check-handoff.py` (from [`templates/`](templates));
+4. plans the milestones and writes the first agent prompt;
+5. commits, and gives you the one line to paste into your coding agent.
 
-From there it's the work loop: paste the agent's summary back, test, merge or retry.
+From there it's the work loop: tell Claude when the agent is done, test, merge or retry.
 
 ### Add it to an existing project
 
@@ -187,12 +262,13 @@ Use agent-coordinator. Adopt my existing project. Repo: <GitHub URL or folder>. 
 ```
 
 Claude then:
-1. **Scans** your README, `docs/`, notes like `TODO.md` / `ROADMAP.md` / `CHANGELOG.md`, the build and test setup,
-   recent commits, branches and tags. It reads; it doesn't trace code (about 15–20 tool calls).
+1. **Scans** your README, `docs/`, notes like `TODO.md` / `ROADMAP.md` / `CHANGELOG.md`, existing agent rules files,
+   the build and test setup (including tool versions), recent commits, branches and tags. It reads; it doesn't trace code (about 15–20 tool calls).
 2. **Inventories** what you already have against what the workflow needs, and uses your existing files where they
    fit (an existing roadmap gets linked from `MILESTONES.md`, not copied).
-3. **Creates only the missing files**: `docs/MILESTONES.md`, `docs/HANDOFF.md`, `docs/research/`, `docs/prompts/`.
-   It never overwrites, moves or renames your files.
+3. **Creates only the missing files**: `AGENTS.md` (or adds the missing sections to your existing rules file),
+   `docs/MILESTONES.md`, `docs/HANDOFF.md`, `docs/research/`, `docs/prompts/`, `docs/reports/TEMPLATE.md`,
+   `scripts/check-handoff.py`. It never overwrites, moves or renames your files.
 4. **Labels what it learned**: anything taken from existing docs is *unverified* until tested.
 5. **Plans ahead** from what it found (half-done branches, failing tests, TODOs, research gaps), asking 1–3 questions
    only when the direction is a real judgment call.
@@ -211,6 +287,8 @@ that can read your repo:
 Continue my project. Read docs/HANDOFF.md and do its "First thing to do".
 ```
 
+Just want to know where things stand? `Use agent-coordinator. Status.`
+
 **Full guide:** the [wiki](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/wiki) covers the whole
 workflow, writing prompts, reviewing agent work, handoffs and the memory model.
 
@@ -222,11 +300,15 @@ skills/
   project-handoff/SKILL.md
 CHANGELOG.md        what changed in each release
 templates/
+  AGENTS.md         -> your AGENTS.md (repo root)
   HANDOFF.md        -> your docs/HANDOFF.md
   MILESTONES.md     -> your docs/MILESTONES.md
   PROMPT.md         -> your docs/prompts/<MILESTONE>-<slug>.md
+  REPORT.md         -> your docs/reports/TEMPLATE.md
+  scripts/check-handoff.py -> your scripts/check-handoff.py
 docs/wiki/          source of the wiki pages
 scripts/validate.py checks skills and links (runs in CI)
+scripts/test_check_handoff.py tests the handoff checker (runs in CI)
 .github/workflows/  CI, plus release zips on tags
 ```
 

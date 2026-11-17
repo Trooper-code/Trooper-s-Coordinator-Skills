@@ -34,3 +34,14 @@ leaking in: dated progress belongs in `MILESTONES.md`, and findings belong in th
 **Can I use prompt caching instead of handoffs?**
 Caching makes re-read tokens cheaper, but they still fill the context window, and models get worse at using
 information buried in a long context. Handoffs fix both problems; caching only helps with one.
+
+**Will my coding agent actually read AGENTS.md?**
+Many coding agents load `AGENTS.md` automatically. If yours reads a different file, Claude adds a one-line pointer
+there. Every prompt also lists `AGENTS.md` first under "Read first", so it gets read either way.
+
+**I switched coding agents. What changes?**
+Tell Claude. It adds (or replaces) the agent-specific section in `AGENTS.md` before the next prompt, with that
+app's tools, limits and quirks. Everything else stays the same.
+
+**Is there a quick way to see where a project is?**
+`Use agent-coordinator. Status.` It reads two files and answers in about five lines.

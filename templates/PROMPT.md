@@ -1,10 +1,13 @@
 # <MILESTONE>-<slug>: <short title>
 
 <!-- Copy to docs/prompts/<MILESTONE>-<slug>.md in your project. The coding agent has none of your chat's
-     context, so everything it needs must be in this file or in the files listed under "Read first". -->
+     context, so everything it needs must be in this file, in AGENTS.md, or in the files under "Read first".
+     Standing rules (don't merge, no copyrighted files, line endings, evidence, stop conditions, report format)
+     live in AGENTS.md. Only add constraints here that are specific to this task. -->
 
 ## Read first
-- `docs/HANDOFF.md`, section "How it works now"
+- `AGENTS.md` (standing rules, including your agent-specific section)
+- `docs/HANDOFF.md`, sections "How it works now" and "Tool versions"
 - `docs/MILESTONES.md`, section <N>
 - `docs/research/<topic>.md`
 
@@ -23,26 +26,24 @@
 ## Tasks
 1. <...>
 2. <...>
-3. Write every finding into `docs/research/<topic>.md`, marked confirmed / unverified / wrong, with evidence.
+3. Write every finding into `docs/research/<topic>.md`, labeled, with evidence.
 
 ## Tools
 - `systematic-debugging`: find the root cause before changing code.
-- `test-driven-development`: write the failing test first.
-- <Any analysis tool, and why it fits. Keep it read-only on the user's files.>
+- <Any other tool, and why it fits this task.>
 
-## Constraints
-- Never commit copyrighted or third-party files (games, ROMs, saves, assets, binaries).
-- Tests must not touch real user data, real logs or real ports.
-- Keep each file's existing line endings.
-- Commit with the project's git identity.
-- **Do not merge.** Leave the branch for review.
+## Task-specific constraints
+- <Only what AGENTS.md doesn't already say, e.g. "don't change the public file format", "keep it .NET 8".>
+
+## Stop and report if
+- The AGENTS.md stop conditions are met (3 failed attempts, missing access, contradicts a confirmed fact, task
+  much bigger than expected), or:
+- <Task-specific, e.g. "the checksum isn't CRC32", "the fix needs changes outside SaveIO/">.
 
 ## Acceptance checks
 - `<test command>` passes.
-- Every claim in your report cites its evidence (file, address/offset, log or test name).
+- Every finding in the report cites its evidence.
 
-## Report back
-- What changed (files, commits).
-- Each finding: confirmed / unverified / wrong, with evidence.
-- Test results (paste the summary line).
-- Open questions and anything you couldn't finish.
+## Report
+Write `docs/reports/<MILESTONE>-<slug>.md` using `docs/reports/TEMPLATE.md`, commit it on the branch, and reply with its
+path plus a 3-line summary.

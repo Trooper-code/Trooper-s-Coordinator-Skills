@@ -10,7 +10,7 @@ why, using the closest match from machine learning: recurrent and memory-augment
 |------|---------|------|----------|---------------|
 | Working memory | the chat's context window | up to the model's limit | one chat | activations inside one forward pass |
 | Short-term state | `docs/HANDOFF.md` | ~100 lines / 10 KB | rewritten every session | RNN/LSTM hidden state `h_t` |
-| Long-term memory | `docs/research/*.md`, `RESEARCH.md`, `MILESTONES.md` | unbounded | permanent, versioned in git | external memory (Neural Turing Machine, RAG index) |
+| Long-term memory | `docs/research/*.md`, `RESEARCH.md`, `MILESTONES.md`, `docs/reports/` | unbounded | permanent, versioned in git | external memory (Neural Turing Machine, RAG index) |
 
 ## A chat is one time step
 
@@ -39,7 +39,7 @@ flowchart LR
     LT <-->|read / write| C2
 ```
 
-The agent's summary is the step's input `x_t`. That's why the handoff ends with
+The agent's report (`docs/reports/`, committed on its branch) is the step's input `x_t`. That's why the handoff ends with
 `[Paste the coding agent's latest summary here]`: the input slot for the next step.
 
 ## The LSTM gates, mapped
@@ -51,6 +51,10 @@ An LSTM (Long Short-Term Memory) controls its state with three gates. Each has a
 | **Forget gate** | Decides what to drop from the state | Keep HANDOFF.md near the budget. Merge duplicate lessons. Replace the reviewed agent summary with the placeholder. "How it works now" is rewritten, never appended. |
 | **Input gate** | Decides what new information gets written | Findings go into the research docs **first**, marked confirmed / unverified / wrong, with evidence. Only the current state and next step go into HANDOFF.md. |
 | **Output gate** | Decides what part of the state is exposed to the next step | "First thing to do" and the "Read first" list in agent prompts: the next step reads only what it needs. |
+
+The size budget used to be only a rule Claude was asked to follow. Since v1.3.0, `scripts/check-handoff.py`
+enforces it: the forget gate has a hard limit, and dangling pointers (output-gate addresses that lead nowhere) fail
+the check.
 
 There's one invariant the forget gate must respect: **before a fact is cut from HANDOFF.md, it must exist in the
 research docs.** In ML terms, nothing leaves short-term state without being written to long-term memory first.

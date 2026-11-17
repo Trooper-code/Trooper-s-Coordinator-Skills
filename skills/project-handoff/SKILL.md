@@ -16,6 +16,10 @@ line of HANDOFF.md, so it holds the current state and the next step, not history
 - `docs/MILESTONES.md` — the status board: milestones, a dated progress log, and the "Next" step.
 - Research docs — `RESEARCH.md` or `docs/research/*.md` — where findings live (formats, offsets, protocols, how things work).
 - `docs/prompts/` — prompts for the coding agent (see the agent-coordinator skill).
+- `docs/reports/` — the coding agent's reports (it commits them on its branch), with `TEMPLATE.md` for the format.
+- `AGENTS.md` — the coding agent's standing rules (see the agent-coordinator skill).
+- `scripts/check-handoff.py` — checks HANDOFF.md's size, sections, ending and paths. Copy it from the templates if
+  it's missing.
 
 Starter templates: `templates/` in https://github.com/Trooper-code/Trooper-s-Coordinator-Skills
 
@@ -45,16 +49,20 @@ Starter templates: `templates/` in https://github.com/Trooper-code/Trooper-s-Coo
    instruction to paste into the agent.
 
 5. **Update `docs/HANDOFF.md`** with this structure:
-   - **Setup**: tools, versions, and a table of folders/paths (only change what changed).
+   - **Setup**: tools and a table of folders/paths (only change what changed).
+   - **Tool versions**: exact versions of the compiler, SDK, emulator, loaders, mods: whatever a mismatch could
+     break. Update it whenever a version changes; the agent's report is checked against it.
    - **How it works now**: a short summary of the current working state (what's confirmed, which tag holds it),
      with pointers to the research docs. Rewrite it; don't append. **No history** — dated progress belongs in
      MILESTONES only.
    - **Where it stops**: the latest real test result and the exact log/capture that shows it.
-   - **In progress**: who is doing what, with prompt path and branch.
+   - **In progress**: who is doing what, with the prompt path, the branch, and where its report will be
+     (`docs/reports/<MILESTONE>-<slug>.md` on that branch).
    - **Rules**: one line each (project rules, constraints, paused work).
    - **First thing to do**: concrete steps for the next session, e.g.:
      - read MILESTONES §N and the named doc sections;
-     - run all the tests;
+     - read the agent's report from its branch;
+     - run all the tests, and check the report's tool versions against the table;
      - spot-check the coding agent's claims against the real files and logs;
      - check any new output by hand;
      - list bugs, then gaps, then nitpicks;
@@ -66,9 +74,14 @@ Starter templates: `templates/` in https://github.com/Trooper-code/Trooper-s-Coo
    - Leave out the user's personal preferences (their profile/settings already supply them).
    - End with the placeholder line `[Paste the coding agent's latest summary here]`. If an old pasted summary is
      there, **replace** it with the placeholder — once reviewed, it's stale, and what was true is in the docs now.
+     When the agent writes its report to `docs/reports/`, the placeholder can stay as it is: the next chat reads the
+     report from the branch instead.
 
    **Before cutting any fact from HANDOFF.md, grep the research docs for it.** If it isn't there, move it there
    first. Compare sizes (`wc -l -c`) before and after and stay near the budget.
+
+   **Then run `python scripts/check-handoff.py`** and fix everything it reports before committing: size budget,
+   missing sections, a missing summary line, and paths that don't exist.
 
 6. **Preserve line endings.** Check each file (`file x`, or count CRs) before editing, and edit with a
    read-modify-write that keeps them (CRLF stays CRLF, LF stays LF). Never re-type a file from tool output. Do each
@@ -80,10 +93,13 @@ Starter templates: `templates/` in https://github.com/Trooper-code/Trooper-s-Coo
 8. **Tell the user, briefly** (a few lines, not a recap of the session):
    - what was recorded and where (commit hashes);
    - the switch routine: run anything you asked for (logs, captures) → give the coding agent its prompt → new chat →
-     paste HANDOFF.md → replace the placeholder with the agent's summary;
+     paste HANDOFF.md (or, if the chat can read the repo, "Read docs/HANDOFF.md and do its First thing to do").
+     The agent's report lands on its branch, so it doesn't need pasting. Only if the agent can't commit a report,
+     replace the placeholder with its summary;
    - anything they must run first.
 
-9. **If the user then pastes the coding agent's summary into this chat**, save them a step:
+9. **If the user then pastes the coding agent's summary into this chat** (e.g. the agent couldn't commit a report),
+   save them a step:
    - replace the placeholder in `docs/HANDOFF.md` with the summary, headed
      `**<Agent>'s <step> summary (unreviewed):**`, keeping line endings (read-modify-write script);
    - commit it;
