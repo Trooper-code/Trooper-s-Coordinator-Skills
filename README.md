@@ -331,6 +331,59 @@ are private to your account; check each one is switched on in that list.
 **Already have a skill with the same name?** Rename the folder and the `name:` line in its `SKILL.md` first, or
 the two will clash. Skill names can't contain "claude" or "anthropic".
 
+## Where everything goes
+
+There are two kinds of files here: the **skills**, which go where Claude can load them, and the **project files**,
+which go in each of your project repos. Claude copies the project files in for you at kickoff or adopt; this table is
+for when you set things up by hand or want to check.
+
+**The skills (for Claude):**
+
+| You use | Put the skills here |
+|---------|---------------------|
+| Claude apps (claude.ai, desktop, mobile) | Upload each skill's zip from the [latest release](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/releases/latest) in **Customize → Skills** |
+| Claude Code, every project | `~/.claude/skills/agent-coordinator/` and `~/.claude/skills/project-handoff/` (on Windows: `%USERPROFILE%\.claude\skills\`) |
+| Claude Code, one project | `<your-project>/.claude/skills/agent-coordinator/` and `.../project-handoff/` |
+
+**Your project:**
+
+```
+your-project/
+  AGENTS.md                      the coding agent's standing rules (+ its agent-specific section)
+  CHANGELOG.md                   release notes come from here
+  .publish-allowlist             (optional) files the copyright guard should allow
+  docs/
+    HANDOFF.md                   the short index a new chat starts from
+    MILESTONES.md                status board
+    DECISIONS.md                 decisions log
+    research/
+      INDEX.md                   one line per research topic
+      *.md                       your research docs
+    prompts/                     agent prompts, one per task
+    reports/
+      TEMPLATE.md                the report format; agents commit their reports here
+  scripts/                       the check scripts  <- or docs/scripts/, see below
+    check-handoff.py   check-research.py   check-report.py   check-prompt.py
+    check-safe-to-publish.py   release-notes.py   detect-mode.py
+    hooks/pre-commit             a copy of the hook, kept in the repo
+  .github/workflows/
+    checks.yml                   copyright guard + handoff check on every push
+    release.yml                  creates releases from CHANGELOG.md when you push a tag
+  .git/hooks/pre-commit          the installed hook (not committed; copy it here once per clone)
+```
+
+**`scripts/` or `docs/scripts/`: your choice.** Put the check scripts in `scripts/` at the repo root (the default),
+or in `docs/scripts/` if you'd rather keep everything for the workflow under `docs/`. Claude looks in both and uses
+whichever your project has. So do the pre-commit hook and both workflows, so nothing needs editing. Pick one per
+project and don't split the scripts between them.
+
+To install the hook after cloning, run one of these from the repo root:
+```
+cp scripts/hooks/pre-commit .git/hooks/pre-commit
+cp docs/scripts/hooks/pre-commit .git/hooks/pre-commit
+```
+On Windows PowerShell, `Copy-Item` works the same way.
+
 ## Quick start
 
 ### Start a new project

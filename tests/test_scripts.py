@@ -145,6 +145,49 @@ class SafeToPublish(Temp):
         self.assertIn("new.iso", out)
 
 
+class Hook(Temp):
+    """The pre-commit hook finds the scripts in scripts/ or docs/scripts/."""
+
+    def setUp(self):
+        super().setUp()
+        self.git("init", "-q")
+
+    def install(self, scripts_dir):
+        (self.repo / scripts_dir).mkdir(parents=True, exist_ok=True)
+        (self.repo / scripts_dir / "check-safe-to-publish.py").write_bytes(
+            (SCRIPTS / "check-safe-to-publish.py").read_bytes())
+        hook = self.repo / ".git" / "hooks" / "pre-commit"
+        hook.write_bytes((ROOT / "templates" / "hooks" / "pre-commit").read_bytes())
+        hook.chmod(0o755)
+
+    def commit(self):
+        return subprocess.run(["git", "commit", "-qm", "t"], cwd=self.repo, capture_output=True, text=True,
+                              env={**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+                                   "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"})
+
+    def test_blocks_rom_with_scripts_at_root(self):
+        self.install("scripts")
+        write(self.repo, "game.gb", b"\x00")
+        self.git("add", "-A")
+        r = self.commit()
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("Game Boy ROM", r.stdout + r.stderr)
+
+    def test_blocks_rom_with_scripts_under_docs(self):
+        self.install("docs/scripts")
+        write(self.repo, "game.gb", b"\x00")
+        self.git("add", "-A")
+        r = self.commit()
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("Game Boy ROM", r.stdout + r.stderr)
+
+    def test_clean_commit_passes(self):
+        self.install("docs/scripts")
+        write(self.repo, "main.c", "x")
+        self.git("add", "-A")
+        self.assertEqual(self.commit().returncode, 0)
+
+
 # ---------------------------------------------------------------- check-research.py
 HANDOFF_VERSIONS = """
 # Handoff
@@ -349,6 +392,22 @@ class DetectMode(Temp):
         self.assertIn("CLAUDE.md", r["rules_files"])
         self.assertIn("TODO.md", r["notes"])
         self.assertIn("AGENTS.md", r["missing"])
+
+    def test_scripts_under_docs_are_found(self):
+        write(self.repo, "src/a.c", "x")
+        write(self.repo, "docs/scripts/check-handoff.py", "x")
+        write(self.repo, "docs/scripts/check-safe-to-publish.py", "x")
+        r = self.mode()
+        self.assertEqual(r["scripts_dir"], "docs/scripts")
+        self.assertIn("docs/scripts/check-handoff.py", r["have"])
+        self.assertIn("docs/scripts/check-report.py", r["missing"])
+        self.assertNotIn("scripts/check-handoff.py", r["missing"])
+
+    def test_scripts_default_to_repo_root(self):
+        write(self.repo, "src/a.c", "x")
+        r = self.mode()
+        self.assertEqual(r["scripts_dir"], "scripts")
+        self.assertIn("scripts/check-handoff.py", r["missing"])
 
     def test_handoff_is_continue(self):
         write(self.repo, "src/a.c", "x")

@@ -17,10 +17,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Find the scripts folder (scripts/ or docs/scripts/)
+        run: |
+          if [ -d scripts ] && [ -f scripts/check-safe-to-publish.py ]; then echo "S=scripts" >> "$GITHUB_ENV"
+          elif [ -f docs/scripts/check-safe-to-publish.py ]; then echo "S=docs/scripts" >> "$GITHUB_ENV"
+          else echo "Can't find the check scripts in scripts/ or docs/scripts/." && exit 1; fi
       - name: Safe to publish
-        run: python scripts/check-safe-to-publish.py
+        run: python "$S/check-safe-to-publish.py"
       - name: Handoff
         run: |
-          if [ -f docs/HANDOFF.md ]; then python scripts/check-handoff.py; else echo "No docs/HANDOFF.md yet."; fi
+          if [ -f docs/HANDOFF.md ]; then python "$S/check-handoff.py"; else echo "No docs/HANDOFF.md yet."; fi
       - name: Research (report only)
-        run: python scripts/check-research.py --warn-only
+        run: python "$S/check-research.py" --warn-only

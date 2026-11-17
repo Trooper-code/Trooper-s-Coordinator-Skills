@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- **Scripts in `docs/scripts/`.** The check scripts can now live in `docs/scripts/` as well as `scripts/`. The
+  coordinator looks in both when it scans a project, `detect-mode.py` reports which one a repo uses, and the
+  pre-commit hook and both workflow templates find the scripts in either folder.
+- README: new "Where everything goes" section: where the skills go for each Claude app, and a full map of a
+  project's files. Wiki FAQ: both questions.
+
 ## v1.4.0
 
 ### New
