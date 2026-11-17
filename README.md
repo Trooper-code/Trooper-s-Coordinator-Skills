@@ -147,13 +147,36 @@ the two will clash. Skill names can't contain "claude" or "anthropic".
 
 ## Quick start
 
-1. Copy the files from [`templates/`](templates) into your project: `HANDOFF.md` and `MILESTONES.md` go in
-   `docs/`, and `PROMPT.md` is the format for files in `docs/prompts/`.
-2. Tell Claude what you want to build. It splits the work into milestones and writes the first prompt.
-3. Give your coding agent the one-line instruction Claude hands you, e.g.
-   "Read and follow `docs/prompts/M1-save-format.md`".
-4. Paste the agent's summary back to Claude. It reviews the branch and gives you test steps.
-5. When the chat gets long, say **"update the handoff"**, then start a new chat and paste `docs/HANDOFF.md`.
+### Start a new project
+
+Open a fresh chat and start it with the kickoff command:
+
+**Claude Code** (skills are slash commands there):
+```
+/agent-coordinator Start a new project: <name>. Repo: <GitHub URL or folder>. Goal: <what you want to build>. Coding agent: <Antigravity / Codex / ...>.
+```
+
+**Claude apps** (claude.ai / desktop / mobile), paste:
+```
+Use agent-coordinator. Start a new project: <name>. Repo: <GitHub URL or folder>. Goal: <what you want to build>. Coding agent: <Antigravity / Codex / ...>.
+```
+
+Claude then:
+1. asks for repo access, and 1–3 questions only if the goal is unclear;
+2. scaffolds `docs/MILESTONES.md`, `docs/HANDOFF.md`, `docs/research/` and `docs/prompts/` (from
+   [`templates/`](templates));
+3. plans the milestones and writes the first agent prompt;
+4. commits, and gives you the one line to paste into your coding agent.
+
+From there it's the work loop: paste the agent's summary back, test, merge or retry.
+
+### Continue an existing project
+
+Start a fresh chat with your `docs/HANDOFF.md` (see [the handoff](#between-sessions-the-handoff)), or in a chat
+that can read your repo:
+```
+Continue my project. Read docs/HANDOFF.md and do its "First thing to do".
+```
 
 **Full guide:** the [wiki](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/wiki) covers the whole
 workflow, writing prompts, reviewing agent work, handoffs and the memory model.

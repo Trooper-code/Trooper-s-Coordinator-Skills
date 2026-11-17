@@ -1,6 +1,6 @@
 ---
 name: agent-coordinator
-description: Use on projects where a separate coding agent (e.g. Antigravity/Gemini, Codex, another Claude) does the research and heavy coding. Claude coordinates — writes the agent's prompts, reviews its branches, merges and tags — instead of doing the grunt work itself.
+description: Use on projects where a separate coding agent (e.g. Antigravity/Gemini, Codex, another Claude) does the research and heavy coding, and when starting a new project with one. Claude kicks the project off, writes the agent's prompts, reviews its branches, merges and tags.
 ---
 
 # Agent coordinator (Claude as the brain)
@@ -13,6 +13,29 @@ Split the work by strength and cost:
 
 Claude saves its tokens for judgment. It does **not** open new investigations or do major bug fixes itself — those
 go to the agent as a prompt.
+
+## Starting a new project (kickoff)
+Run this when the user starts a fresh project, e.g. `/agent-coordinator` in Claude Code, or a message like
+"Start a new project: <name>. Repo: <url or folder>. Goal: <...>. Coding agent: <...>."
+
+If the repo already has `docs/HANDOFF.md`, this is **not** a new project: read HANDOFF.md, the status board and the
+research docs it points to, then do its "First thing to do" instead.
+
+1. **Get access.** Ask for the repo (GitHub link or local folder) if you don't have it. On a local folder, also ask
+   for delete permission (git creates and removes `.lock` files).
+2. **Scope.** If the goal is truly unclear, ask 1–3 sharp questions: what "done" looks like, which coding agent,
+   and hard constraints (platform, language, what must never be committed). Otherwise start.
+3. **Scaffold the memory** (don't overwrite files that already exist):
+   - `docs/MILESTONES.md`: milestones M1..Mn, each with a one-line done-criterion; a progress log; a "Next" line.
+   - `docs/HANDOFF.md`: setup and folder table, rules, "First thing to do", and the last line
+     `[Paste the coding agent's latest summary here]`.
+   - `docs/research/` (or `RESEARCH.md`) for findings, and `docs/prompts/` for agent prompts.
+   Starter templates: `templates/` in https://github.com/Trooper-code/Trooper-s-Coordinator-Skills
+4. **Write the first prompt** for M1 to `docs/prompts/M1-<slug>.md` (format below). If M1 is pure research, the
+   agent's job is to fill `docs/research/`, not to write code.
+5. **Commit** the scaffolding with a clear message.
+6. **Reply briefly:** the milestone list, the one-line instruction to paste into the agent, and "paste its summary
+   back here when it's done".
 
 ## Milestones and branches
 - Break milestone-sized work into milestones. Each gets its own feature branch.
