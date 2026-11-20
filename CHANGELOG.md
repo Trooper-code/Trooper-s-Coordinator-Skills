@@ -36,6 +36,8 @@ Fixes from two outside reviews (Qwen and Gemini), each checked against the code 
   says how to resolve doc conflicts at merge.
 - The skill says plainly that the check scripts check shape, not truth, so the review steps after them still matter.
 - README: Claude Code install now uses the release zips, which include `templates/`.
+- README: one line under the neural-network table saying this is a borrowed design, not a neural network
+  (nothing is trained), with a link to where the comparison stops.
 
 ### Upgrading
 - Re-upload `agent-coordinator.zip` (or replace its folder in `~/.claude/skills/`, including `templates/`).

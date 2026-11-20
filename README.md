@@ -32,6 +32,11 @@ Neural networks already have good answers to that question, so I borrowed them:
 | **Memory-augmented networks** (Neural Turing Machines, RAG) keep a large *external memory* the model reads and writes through addresses. | The research docs, milestone board and agent reports are the external memory. HANDOFF.md and prompts point to exact sections instead of copying them. |
 | An error in a hidden state **carries forward** into every later step. | Every finding is labeled **confirmed / unverified / wrong** with evidence, so a bad "fact" gets caught instead of spreading. |
 
+**This is a design borrowed from neural networks, not a neural network.** Nothing here is trained and nothing
+learns on its own. The "gates" are written rules and check scripts that Claude follows: plain files in your repo.
+Where the comparison stops is spelled out on the
+[Inspiration](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/wiki/Inspiration#where-the-comparison-stops) wiki page.
+
 **Why this helps agentic work:**
 - **Cheaper.** A chat re-reads its whole context every turn, so cost grows with the *square* of its length. Many
   short chats linked by a small handoff cost far less than one long one.
