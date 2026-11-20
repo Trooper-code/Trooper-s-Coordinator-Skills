@@ -15,7 +15,7 @@ asking you anything. Template: [`templates/PROMPT.md`](https://github.com/Troope
 | **Task-specific constraints** | Only what `AGENTS.md` doesn't already say, e.g. "keep it .NET 8". The standing rules (don't merge, no copyrighted files, line endings) live in `AGENTS.md`. See [[Agent Rules and Reports]]. |
 | **Stop and report if** | The `AGENTS.md` stop conditions plus any for this task, e.g. "the checksum isn't CRC32". |
 | **Acceptance checks** | Which tests must pass. Every claim must cite evidence. |
-| **Report** | Write `docs/reports/<MILESTONE>-<slug>.md` from the template and commit it on the branch, so Claude reads it from the repo. |
+| **Report** | Write `docs/reports/<MILESTONE>-<slug>.md` from the template, commit it on the branch and push the branch, so Claude reads it from the repo. |
 
 ## Tips
 - **Mark everything confirmed or unverified.** The fastest way to waste an agent run is to hand it a wrong

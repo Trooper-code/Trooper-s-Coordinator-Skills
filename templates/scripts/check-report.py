@@ -23,8 +23,10 @@ from pathlib import Path
 
 REQUIRED_SECTIONS = ["Tool versions", "What changed", "Findings", "Tests", "Open questions"]
 LABELS = {"confirmed", "unverified", "wrong"}
+# Every <placeholder> in templates/REPORT.md. tests/test_scripts.py fails if the template gains one that isn't here.
 PLACEHOLDER = re.compile(r"<(MILESTONE|slug|branch|tag|hash|tool|version|file or area|claim|command[^>]*|"
-                         r"the summary line[^>]*|which[^>]*|anything[^>]*|docs/research/\.\.\.[^>]*)>", re.I)
+                         r"the summary line[^>]*|which[^>]*|anything[^>]*|docs/research/\.\.\.[^>]*|"
+                         r"what and why|commit|file, address[^>]*)>", re.I)
 
 
 def sections(text: str) -> dict[str, str]:
@@ -33,7 +35,8 @@ def sections(text: str) -> dict[str, str]:
         if line.startswith("## "):
             if name:
                 out[name] = "\n".join(buf)
-            name, buf = line[3:].strip().lower(), []
+            # "## Stopped because (only if status is "stopped")" -> "stopped because"
+            name, buf = re.sub(r"\s*\(.*\)\s*$", "", line[3:].strip()).lower(), []
         elif name:
             buf.append(line)
     if name:
@@ -66,7 +69,8 @@ def main() -> int:
     secs = sections(text)
     problems = []
 
-    m = re.search(r"\*\*Status:\*\*\s*([a-z]+)", text, re.I)
+    # One word only: the template's unfilled "done | stopped | partial" doesn't count as "done".
+    m = re.search(r"\*\*Status:\*\*\s*([a-z]+)\b(?!\s*\|)", text, re.I)
     status = m.group(1).lower() if m else None
     if status not in {"done", "stopped", "partial"}:
         problems.append("missing or unclear '**Status:**' line. Use exactly one of: done, stopped, partial.")
@@ -74,6 +78,10 @@ def main() -> int:
     for s in REQUIRED_SECTIONS:
         if s.lower() not in secs:
             problems.append(f"missing section '## {s}'.")
+        elif s not in ("Findings", "Tests") and not secs[s.lower()].strip():  # those two have their own checks
+            problems.append(f"'## {s}' is empty. Fill it in, or write 'None.' if there's truly nothing.")
+    if "tool versions" in secs and secs["tool versions"].strip() and not table_rows(secs["tool versions"]):
+        problems.append("'## Tool versions' has no table rows. List each tool and the version you used.")
     if status == "stopped" and not secs.get("stopped because", "").strip():
         problems.append("status is 'stopped' but '## Stopped because' is missing or empty. Say which stop "
                         "condition, what was tried, and what's needed to continue.")
@@ -93,8 +101,10 @@ def main() -> int:
             problems.append(f"finding '{row[0][:50]}' has no evidence. Cite a file, address, log, capture or test.")
 
     tests = secs.get("tests", "")
-    if "tests" in secs and "```" not in tests:
-        problems.append("'## Tests' has no code block. Paste the command you ran and the summary line it printed.")
+    blocks = re.findall(r"```[^\n]*\n(.*?)```", tests, re.S)
+    if "tests" in secs and not any(b.strip() for b in blocks):
+        problems.append("'## Tests' has no filled-in code block. Paste the command you ran and the summary line it "
+                        "printed.")
 
     left = sorted({m.group(0) for m in PLACEHOLDER.finditer(text)})
     if left:

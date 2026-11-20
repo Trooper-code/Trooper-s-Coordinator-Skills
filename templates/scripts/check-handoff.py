@@ -10,8 +10,9 @@ It checks that:
   1. the file is within its size budget (every new chat pays for every line);
   2. every required section is there;
   3. it ends with the agent-summary line (the placeholder, a pasted summary, or a report path);
-  4. every repo path it mentions in backticks or links actually exists, so pointers to the research docs,
-     prompts and reports aren't stale. Paths with <placeholders> or wildcards are skipped.
+  4. every repo path it mentions actually exists, so pointers to the research docs, prompts and reports aren't
+     stale. Paths in `backticks` are read from the repo root; Markdown links are read from HANDOFF.md's own
+     folder, the way GitHub follows them. Paths with <placeholders> or wildcards are skipped.
   5. (a note, not a failure) lessons marked "(x2)" or more have been hit twice, so they should become a rule in
      AGENTS.md or a check script instead of staying a lesson.
 
@@ -81,7 +82,9 @@ def main() -> int:
     last_required = max(
         (i for i, l in enumerate(lines) if l.startswith("## ") and l[3:].strip().lower() in required), default=-1
     )
-    last_block = "\n".join(lines[last_required + 1:]).lower()
+    # Only count lines that aren't list items, so a Lesson that mentions docs/reports/ can't pass for the summary.
+    last_block = "\n".join(l for l in lines[last_required + 1:]
+                           if not re.match(r"\s*([-*+]|\d+\.)\s", l)).lower()
     # Accepts "[Paste <any agent>'s latest summary here]", a pasted "... summary (unreviewed):", or a report path.
     if not (
         re.search(r"\[paste .{0,60}summary here", last_block)
@@ -93,15 +96,23 @@ def main() -> int:
             "\"[Paste the coding agent's latest summary here]\" back as the last line."
         )
 
-    # 4. Referenced paths exist
-    candidates = set(re.findall(r"`([^`\s]+)`", text)) | set(re.findall(r"\]\(([^)\s#]+)", text))
-    for c in sorted(candidates):
-        c = c.rstrip(".,:;")
-        if not c.startswith(PATH_PREFIXES) or re.search(r"[<>*?{}]", c) or "://" in c:
+    # 4. Referenced paths exist. `backticked` paths are written from the repo root; Markdown links are followed
+    #    from HANDOFF.md's own folder (that's how GitHub resolves them), so [x](research/save.md) is right and
+    #    [x](docs/research/save.md) from docs/HANDOFF.md is a broken link.
+    checks = [(c, root / c.rstrip(".,:;"), c.rstrip(".,:;")) for c in set(re.findall(r"`([^`\s]+)`", text))
+              if c.rstrip(".,:;").startswith(PATH_PREFIXES)]
+    for c in set(re.findall(r"\]\(([^)\s#]+)", text)):
+        if "://" in c or c.startswith("mailto:"):
             continue
-        if c.startswith("docs/reports/") and c != "docs/reports/TEMPLATE.md":
+        target = (handoff.parent / c).resolve()
+        shown = target.relative_to(root.resolve()).as_posix() if target.is_relative_to(root.resolve()) else c
+        checks.append((c, target, shown))
+    for c, target, shown in sorted(checks, key=lambda x: x[0]):
+        if re.search(r"[<>*?{}]", c) or "://" in c:
+            continue
+        if shown.startswith("docs/reports/") and shown != "docs/reports/TEMPLATE.md":
             continue  # agent reports live on the agent's branch until it's merged
-        if not (root / c).exists():
+        if not target.exists():
             problems.append(
                 f"points to `{c}`, which doesn't exist. Fix the path, or write that file/section first."
             )
@@ -114,7 +125,8 @@ def main() -> int:
         if line.startswith("## "):
             in_lessons = line[3:].strip().lower() == "lessons"
             continue
-        m = re.search(r"\((?:x|×)\s*(\d+)\)\s*$", line.strip(), re.I) if in_lessons else None
+        # Allows trailing punctuation or bold around the marker: "(x2)", "(x2).", "**(x2)**".
+        m = re.search(r"\((?:x|×)\s*(\d+)\)[\s.*_]*$", line.strip(), re.I) if in_lessons else None
         if m and int(m.group(1)) >= 2:
             promote.append(line.strip().lstrip("-* ").strip())
 

@@ -325,8 +325,11 @@ the wiki.
 **Customize → Skills → + → Create skill → Upload a skill** and pick the zip. Do it once per skill. Uploaded skills
 are private to your account; check each one is switched on in that list.
 
-**Claude Code**: copy the folders from `skills/` into `~/.claude/skills/` (all your projects) or
-`<your-project>/.claude/skills/` (one project).
+**Claude Code**: unzip each skill's `.zip` from the
+[latest release](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/releases/latest) into
+`~/.claude/skills/` (all your projects) or `<your-project>/.claude/skills/` (one project). The zips include the
+`templates/` folder the skill copies from. Installing from a clone instead? Copy each folder from `skills/`, then
+copy the repo's `templates/` folder into each one (e.g. `~/.claude/skills/agent-coordinator/templates/`).
 
 **Already have a skill with the same name?** Rename the folder and the `name:` line in its `SKILL.md` first, or
 the two will clash. Skill names can't contain "claude" or "anthropic".

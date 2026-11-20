@@ -46,5 +46,5 @@
 - Every finding in the report cites its evidence.
 
 ## Report
-Write `docs/reports/<MILESTONE>-<slug>.md` using `docs/reports/TEMPLATE.md`, commit it on the branch, and reply with its
-path plus a 3-line summary.
+Write `docs/reports/<MILESTONE>-<slug>.md` using `docs/reports/TEMPLATE.md`, commit it on the branch, push the branch,
+and reply with its path plus a 3-line summary.

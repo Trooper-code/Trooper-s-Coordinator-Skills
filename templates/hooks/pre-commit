@@ -8,7 +8,17 @@
 # Git for Windows runs this with its own sh, so it works from PowerShell, cmd and GUI clients too.
 # It needs Python on your PATH. To skip it once on purpose: git commit --no-verify
 
-if command -v python3 >/dev/null 2>&1; then PY=python3; else PY=python; fi
+# Use the first Python that actually runs. On Windows, "python3" can be the Microsoft Store shortcut, which exists
+# on PATH but only prints "Python was not found", so checking that the name exists isn't enough.
+PY=
+for c in python3 python py; do
+  if "$c" -c "" >/dev/null 2>&1; then PY=$c; break; fi
+done
+if [ -z "$PY" ]; then
+  echo "Copyright guard: no working Python found (tried python3, python, py). Install Python from python.org and"
+  echo "tick 'Add python.exe to PATH', or skip this check once with: git commit --no-verify"
+  exit 1
+fi
 # The check scripts live in scripts/ or docs/scripts/; use whichever this repo has.
 if [ -f scripts/check-safe-to-publish.py ]; then S=scripts
 elif [ -f docs/scripts/check-safe-to-publish.py ]; then S=docs/scripts

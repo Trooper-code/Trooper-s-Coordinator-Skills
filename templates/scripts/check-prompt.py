@@ -9,7 +9,8 @@ It checks that:
   1. every required section is there;
   2. "Read first" lists AGENTS.md first (the agent's standing rules);
   3. the branch names both a branch and the tag to start from;
-  4. every known fact is labeled confirmed or unverified, with evidence;
+  4. every known fact is a table row labeled confirmed or unverified, with evidence (facts written as bullets
+     are flagged, since they'd skip this check);
   5. there are acceptance checks and a report path in docs/reports/;
   6. no template placeholders are left (like <MILESTONE> or <...>).
 
@@ -22,9 +23,10 @@ from pathlib import Path
 
 REQUIRED_SECTIONS = ["Read first", "Goal", "Branch", "Known facts", "Tasks", "Stop and report if",
                      "Acceptance checks", "Report"]
+# Every <placeholder> in templates/PROMPT.md. tests/test_scripts.py fails if the template gains one that isn't here.
 PLACEHOLDER = re.compile(r"<(MILESTONE|slug|milestone|last-good-tag|topic|N|\.\.\.|test command|"
                          r"One or two sentences[^>]*|Only what[^>]*|Task-specific[^>]*|Any other tool[^>]*|"
-                         r"section|D#|e\.g\.[^>]*)>")
+                         r"section|D#|e\.g\.[^>]*|short title|test run / capture name|read from source[^>]*)>")
 
 
 def sections(text: str) -> dict[str, str]:
@@ -33,7 +35,7 @@ def sections(text: str) -> dict[str, str]:
         if line.startswith("## "):
             if name:
                 out[name] = "\n".join(buf)
-            name, buf = line[3:].strip().lower(), []
+            name, buf = re.sub(r"\s*\(.*\)\s*$", "", line[3:].strip()).lower(), []
         elif name:
             buf.append(line)
     if name:
@@ -56,17 +58,27 @@ def main() -> int:
     for s in REQUIRED_SECTIONS:
         if s.lower() not in secs:
             problems.append(f"missing section '## {s}'.")
+        elif not secs[s.lower()].strip():
+            problems.append(f"'## {s}' is empty. The agent can't ask you, so it needs this filled in.")
 
     items = [l.strip() for l in secs.get("read first", "").splitlines() if l.strip().startswith(("-", "*", "1."))]
     if "read first" in secs and (not items or "AGENTS.md" not in items[0]):
         problems.append("'Read first' must list AGENTS.md first, so the agent loads its standing rules.")
 
     branch = secs.get("branch", "")
-    if "branch" in secs and not (re.search(r"`[^`]+`", branch) and re.search(r"\btag\b", branch, re.I)):
-        problems.append("'Branch' needs the branch name in backticks and the tag to branch from.")
+    if "branch" in secs and not (re.search(r"`[^`]+`", branch) and re.search(r"\btag\s+`[^`]+`", branch, re.I)):
+        problems.append("'Branch' needs the branch name in backticks and the tag to branch from, e.g. "
+                        "`m2-save-format`, branched from tag `m1`.")
 
-    for line in secs.get("known facts", "").splitlines():
+    facts = secs.get("known facts", "")
+    fact_rows = 0
+    for line in facts.splitlines():
         s = line.strip()
+        if (s.startswith(("-", "*")) or re.match(r"\d+\.", s)) and \
+                not re.fullmatch(r"none\.?", s.lstrip("-*0123456789. "), re.I):
+            problems.append(f"known fact '{s.lstrip('-*0123456789. ')[:50]}' is a bullet. Put facts in the table "
+                            "(Fact | Status | Evidence) so each one is labeled and has evidence.")
+            continue
         if not s.startswith("|"):
             continue
         cells = [c.strip() for c in s.strip("|").split("|")]
@@ -76,9 +88,10 @@ def main() -> int:
             problems.append(f"known fact '{cells[0][:50]}' must be labeled confirmed or unverified.")
         elif not cells[2]:
             problems.append(f"known fact '{cells[0][:50]}' has no evidence.")
+        fact_rows += 1
+    if facts.strip() and not fact_rows and not re.search(r"^\s*none\b", facts, re.I | re.M):
+        problems.append("'Known facts' has no table rows. Use the table, or write 'None.' if there truly are none.")
 
-    if "acceptance checks" in secs and not secs["acceptance checks"].strip():
-        problems.append("'Acceptance checks' is empty. Say which tests must pass.")
     if "report" in secs and "docs/reports/" not in secs["report"]:
         problems.append("'Report' must say where the report goes: docs/reports/<MILESTONE>-<slug>.md.")
 

@@ -24,6 +24,8 @@ branch, and merges it after the user has tested it. Follow these rules on every 
 - Every claim cites its evidence: file, address/offset, log, capture or test name.
 - Keep each file's existing line endings (CRLF stays CRLF, LF stays LF).
 - Commit with the project's git identity. Small commits with clear messages.
+- Don't edit `docs/HANDOFF.md` or `docs/MILESTONES.md`. The coordinator owns them and updates them on main while
+  you work, so editing them on your branch only causes merge conflicts. Put anything they need in your report.
 
 ## Never
 - Commit copyrighted or third-party files: games, ROMs, saves, assets, proprietary binaries or code. Reference them
@@ -48,8 +50,8 @@ stuck" is more useful than more attempts.
 ## Your report
 When you finish or stop, write `docs/reports/<MILESTONE>-<slug>.md` using the format in
 `docs/reports/TEMPLATE.md`, check it with `python scripts/check-report.py <your report>`, commit it on your
-branch, and reply with its path plus a 3-line summary. The coordinator reads
-the report from your branch, so it must stand on its own.
+branch, **push your branch** (`git push -u origin <your branch>`, never main), and reply with its path plus a
+3-line summary. The coordinator reads the report from the pushed branch, so it must stand on its own.
 
 ## Agent-specific constraints: <agent name>
 <!-- Start from your agent's profile in templates/agents/ (Antigravity, Codex, Claude Code, Cursor, generic).
