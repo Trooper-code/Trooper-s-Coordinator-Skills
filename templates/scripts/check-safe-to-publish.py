@@ -12,7 +12,10 @@ full check on every push.
 What it blocks:
   - file types that are almost always copyrighted game data or personal saves (ROMs, disc images, console
     executables and packages, save files, emulator states);
+  - files that usually hold secrets: .env, private keys and certificates (.pem, .key, .p12, .pfx, id_rsa...);
   - any binary file over MAX_BINARY_MB.
+
+With --staged it checks the staged copy of each file (what will actually be committed), not the one on disk.
 
 It's a check on names, sizes and contents that look binary, not proof. It catches accidents, not someone who
 renames files on purpose.
@@ -51,15 +54,39 @@ BLOCKED_EXTENSIONS = {
     # Saves and emulator states
     ".sav": "save file", ".srm": "save file", ".mcr": "memory card", ".ps2": "memory card",
     ".state": "emulator save state", ".ss0": "emulator save state", ".dsv": "save file",
+    ".rom": "ROM image",
+    # Secrets and keys (personal, not copyrighted, but just as bad to publish)
+    ".pem": "private key or certificate", ".key": "private key", ".p12": "certificate bundle",
+    ".pfx": "certificate bundle",
 }
 # ".bin" and ".elf" are too common to block by name; they're caught by the binary size limit instead.
 BLOCKED_EXTENSIONS = {k: v for k, v in BLOCKED_EXTENSIONS.items() if v}
+# Whole file names (lowercase) that hold passwords, tokens or keys.
+BLOCKED_NAMES = {
+    ".env": "secrets file (.env)", "id_rsa": "SSH private key", "id_ed25519": "SSH private key",
+    "credentials.json": "credentials file",
+}
 ALLOWLIST_FILE = ".publish-allowlist"
 # -------------------------------------------------------------------------------------
 
 
 def git(*args: str) -> str:
-    return subprocess.run(["git", *args], capture_output=True, text=True, check=True).stdout
+    # utf-8 so names like "Pokémon.gb" come through intact on every OS.
+    return subprocess.run(["git", *args], capture_output=True, text=True, encoding="utf-8", check=True).stdout
+
+
+def git_names(*args: str) -> list[str]:
+    """File names from a git command run with -z. Without -z, git quotes and escapes non-ASCII names
+    ("Pok\\303\\251mon.gb"), which then don't match any file on disk and would be skipped silently."""
+    return [n for n in git(*args, "-z").split("\0") if n]
+
+
+def staged_info(name: str) -> tuple[int, bool]:
+    """Size and is-binary for the copy of a file that's staged (what will actually be committed), not the one on
+    disk, which may have been edited since `git add`."""
+    size = int(git("cat-file", "-s", f":{name}").strip())
+    numstat = git("diff", "--cached", "--numstat", "--", name)
+    return size, numstat.startswith("-\t-\t")  # git prints "-  -" for files it treats as binary
 
 
 def load_allowlist(root: Path) -> list[str]:
@@ -89,9 +116,9 @@ def main() -> int:
         root = Path(git("rev-parse", "--show-toplevel").strip())
         if staged:
             # Added, copied, modified or renamed files that are staged for the next commit.
-            files = git("diff", "--cached", "--name-only", "--diff-filter=ACMR").splitlines()
+            files = git_names("diff", "--cached", "--name-only", "--diff-filter=ACMR")
         else:
-            files = git("ls-files").splitlines()
+            files = git_names("ls-files")
     except (subprocess.CalledProcessError, FileNotFoundError):
         print("This needs to run inside a git repo, with git installed.")
         return 1
@@ -102,14 +129,21 @@ def main() -> int:
         if any(fnmatch.fnmatch(name, pat) for pat in allow):
             continue
         p = root / name
-        if not p.is_file():
-            continue
-        kind = BLOCKED_EXTENSIONS.get(p.suffix.lower())
+        if not staged and not p.is_file():
+            continue  # deleted from disk but not from git yet, or a submodule
+        kind = BLOCKED_NAMES.get(p.name.lower()) or BLOCKED_EXTENSIONS.get(p.suffix.lower())
         if kind:
-            problems.append(f"{name}: looks like a {kind}. Game data and saves can't go in a public repo.")
+            problems.append(f"{name}: looks like a {kind}. That can't go in a public repo.")
             continue
-        size_mb = p.stat().st_size / (1024 * 1024)
-        if size_mb > MAX_BINARY_MB and looks_binary(p):
+        if staged:
+            try:
+                size, binary = staged_info(name)
+            except subprocess.CalledProcessError:
+                continue  # a submodule or symlink, not a file
+        else:
+            size, binary = p.stat().st_size, None
+        size_mb = size / (1024 * 1024)
+        if size_mb > MAX_BINARY_MB and (binary if binary is not None else looks_binary(p)):
             problems.append(f"{name}: a {size_mb:.1f} MB binary file (limit {MAX_BINARY_MB} MB).")
 
     if problems:

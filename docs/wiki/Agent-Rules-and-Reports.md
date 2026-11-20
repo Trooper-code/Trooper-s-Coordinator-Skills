@@ -15,7 +15,7 @@ gets read even by an agent that doesn't load it on its own.
 | Never | Merge, rebase onto main or tag; commit copyrighted or third-party files; touch real user data, logs, saves or ports in tests. |
 | Tool versions | Record the versions you used; flag any that differ from `HANDOFF.md`. |
 | Stop and report | 3 failed attempts, missing access, contradicts a confirmed fact, task much bigger than expected. |
-| Your report | Write `docs/reports/<MILESTONE>-<slug>.md` and commit it on the branch. |
+| Your report | Write `docs/reports/<MILESTONE>-<slug>.md`, commit it on the branch and push the branch (never main). |
 | Agent-specific constraints | Written by Claude for the agent *you* use (see below). |
 
 ### Agent-specific constraints

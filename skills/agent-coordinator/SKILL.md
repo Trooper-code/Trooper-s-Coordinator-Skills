@@ -58,7 +58,8 @@ E.g. `/agent-coordinator Start a new project: <name>. Repo: <url or folder>. Goa
    - `scripts/` (or `docs/scripts/`, if the user prefers): the check scripts (see `reference/scripts.md`).
    - Safety and releases: `templates/hooks/pre-commit` copied to `scripts/hooks/pre-commit` (hooks themselves
      aren't committed, so the user installs it once with `cp scripts/hooks/pre-commit .git/hooks/pre-commit`,
-     or the `docs/scripts/...` path), plus `.github/workflows/checks.yml` and `.github/workflows/release.yml`.
+     or the `docs/scripts/...` path; copy the file rather than retyping it, and on Linux/macOS also run
+     `chmod +x .git/hooks/pre-commit`, or git silently skips it), plus `.github/workflows/checks.yml` and `.github/workflows/release.yml`.
      The hook and workflows find the scripts in either folder.
 4. **Write the first prompt** for M1 to `docs/prompts/M1-<slug>.md` and run `check-prompt.py` on it. If M1 is pure
    research, the agent's job is to fill `docs/research/`, not to write code.
@@ -149,7 +150,11 @@ done-criteria, and says the verifiers run the repo's tests.
 
 ## Reviewing the agent's work
 Read the report from the branch: `git fetch origin <branch>` then
-`git show origin/<branch>:docs/reports/<file>`. Only ask the user to paste a summary if the report isn't there.
+`git show origin/<branch>:docs/reports/<file>`. Only ask the user to paste a summary if the report isn't there
+(usually the agent forgot to push; ask it to).
+
+The check scripts check **shape, not truth**: a report can pass with plausible but wrong evidence. Steps 2–5 below
+are what catch substance; never skip them because a script said OK.
 
 The agent has been wrong before. Verify, don't trust:
 1. **`check-report.py`** on the report. A report that fails goes back to the agent, unless the gaps are trivial.
@@ -169,7 +174,9 @@ task) and write that into the next prompt.
 
 After review:
 - **Works** → give the user exact test steps (what to do, what they should see). Once they confirm, merge, tag, add
-  a line under `## Unreleased` in `CHANGELOG.md`, and record it in the docs.
+  a line under `## Unreleased` in `CHANGELOG.md`, and record it in the docs. If the merge conflicts in the docs
+  (main moved while the agent worked): in research docs and `INDEX.md` keep both sides' entries; in `HANDOFF.md`
+  and `MILESTONES.md` keep main's (you own them); then run `check-research.py` and `check-handoff.py`.
 - **Doesn't work** → write the follow-up prompt with the bugs and gaps as tasks.
 - **Abandon instead** after **two failed review rounds**, or when the fix heads the wrong way: keep the branch
   (rename it `abandoned/<name>` if the user agrees), record why in the research docs and as a Lesson, keep any
@@ -189,7 +196,8 @@ After review:
 - **Findings rule.** Every finding goes into the repo docs in the same session, labeled **confirmed**,
   **unverified** or **wrong**, with evidence. Fix old claims that turned out wrong. Keep line endings.
 - **Safe to publish.** Nothing copyrighted or personal gets committed: the pre-commit hook and CI run
-  `check-safe-to-publish.py`. Users supply their own game files.
+  `check-safe-to-publish.py` (game files, saves, big binaries, keys and `.env` files). It checks names and sizes,
+  so still look at what a branch adds. Users supply their own game files.
 
 ## Session handoffs
 Pair this with the **project-handoff** skill. Suggest a handoff at the end of each review round or when context gets

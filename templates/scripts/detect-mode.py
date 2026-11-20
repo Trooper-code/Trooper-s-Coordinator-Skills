@@ -15,7 +15,7 @@ It also finds the check scripts' folder (scripts/ at the repo root, or docs/scri
 that exist and the ones that are missing, plus any existing agent rules files and
 planning notes it found. That's the inventory step of "adopt", done without spending tool calls on it.
 
-Exit code 0 always (it reports; it doesn't judge). Only uses the Python standard library.
+Exit code 0 when it ran (it reports; it doesn't judge), 1 if the folder doesn't exist. Only uses the Python standard library.
 """
 import json
 import sys
@@ -45,7 +45,8 @@ WORKFLOW_FILES = [
 ]
 SCRIPT_DIRS = ["scripts", "docs/scripts"]
 RULES_FILES = ["AGENTS.md", "CLAUDE.md", "GEMINI.md", ".cursorrules", ".cursor/rules",
-               ".github/copilot-instructions.md", ".agent/rules", ".windsurfrules"]
+               ".github/copilot-instructions.md", ".agents/rules", ".agent/rules", ".windsurfrules"]
+# Antigravity reads .agents/rules/ (see templates/agents/antigravity.md); .agent/rules/ is an older spelling.
 NOTES_FILES = ["RESEARCH.md", "NOTES.md", "TODO.md", "ROADMAP.md", "CHANGELOG.md", "CONTRIBUTING.md", "docs"]
 
 
@@ -91,8 +92,9 @@ def main() -> int:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     repo = Path(args[0] if args else ".").resolve()
     if not repo.is_dir():
-        print(f"{repo} isn't a folder. Pass the path to the repo.")
-        return 0
+        msg = f"{repo} isn't a folder. Pass the path to the repo."
+        print(json.dumps({"error": msg}) if "--json" in sys.argv else msg)
+        return 1
     r = detect(repo)
     if "--json" in sys.argv:
         print(json.dumps(r, indent=2))

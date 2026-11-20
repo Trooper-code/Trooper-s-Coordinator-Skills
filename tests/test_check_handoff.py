@@ -62,6 +62,15 @@ cases = [
     ("repeated lesson prints a promote note", GOOD.replace("## Lessons\n- x", "## Lessons\n- tests wrote real logs (x2)"),
      True, 0, "promote it to a rule"),
     ("no summary line", GOOD.replace("[Paste Antigravity's latest summary here]", ""), True, 1, "agent-summary line"),
+    ("a lesson mentioning docs/reports/ doesn't count as the summary line",
+     GOOD.replace("## Lessons\n- x", "## Lessons\n- read docs/reports/ from the branch")
+         .replace("[Paste Antigravity's latest summary here]", ""), True, 1, "agent-summary line"),
+    ("markdown links are followed from HANDOFF.md's folder",
+     GOOD.replace("## Rules\n- x", "## Rules\n- [save](research/save.md)"), True, 0, "OK"),
+    ("markdown link written from the repo root is broken on GitHub",
+     GOOD.replace("## Rules\n- x", "## Rules\n- [save](docs/research/save.md)"), True, 1, "doesn't exist"),
+    ("repeat marker with trailing punctuation", GOOD.replace("## Lessons\n- x", "## Lessons\n- tests wrote real logs (x2)."),
+     True, 0, "promote it to a rule"),
 ]
 failed = 0
 for name, text, files, want_code, want_text in cases:

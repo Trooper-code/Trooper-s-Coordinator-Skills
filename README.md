@@ -32,6 +32,11 @@ Neural networks already have good answers to that question, so I borrowed them:
 | **Memory-augmented networks** (Neural Turing Machines, RAG) keep a large *external memory* the model reads and writes through addresses. | The research docs, milestone board and agent reports are the external memory. HANDOFF.md and prompts point to exact sections instead of copying them. |
 | An error in a hidden state **carries forward** into every later step. | Every finding is labeled **confirmed / unverified / wrong** with evidence, so a bad "fact" gets caught instead of spreading. |
 
+**This is a design borrowed from neural networks, not a neural network.** Nothing here is trained and nothing
+learns on its own. The "gates" are written rules and check scripts that Claude follows: plain files in your repo.
+Where the comparison stops is spelled out on the
+[Inspiration](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/wiki/Inspiration#where-the-comparison-stops) wiki page.
+
 **Why this helps agentic work:**
 - **Cheaper.** A chat re-reads its whole context every turn, so cost grows with the *square* of its length. Many
   short chats linked by a small handoff cost far less than one long one.
@@ -325,8 +330,11 @@ the wiki.
 **Customize → Skills → + → Create skill → Upload a skill** and pick the zip. Do it once per skill. Uploaded skills
 are private to your account; check each one is switched on in that list.
 
-**Claude Code**: copy the folders from `skills/` into `~/.claude/skills/` (all your projects) or
-`<your-project>/.claude/skills/` (one project).
+**Claude Code**: unzip each skill's `.zip` from the
+[latest release](https://github.com/Trooper-code/Trooper-s-Coordinator-Skills/releases/latest) into
+`~/.claude/skills/` (all your projects) or `<your-project>/.claude/skills/` (one project). The zips include the
+`templates/` folder the skill copies from. Installing from a clone instead? Copy each folder from `skills/`, then
+copy the repo's `templates/` folder into each one (e.g. `~/.claude/skills/agent-coordinator/templates/`).
 
 **Already have a skill with the same name?** Rename the folder and the `name:` line in its `SKILL.md` first, or
 the two will clash. Skill names can't contain "claude" or "anthropic".

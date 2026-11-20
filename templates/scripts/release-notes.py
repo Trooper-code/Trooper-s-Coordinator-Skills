@@ -10,7 +10,7 @@ It finds the heading for that version in CHANGELOG.md ("## v1.4.0", "## 1.4.0" o
 prints everything up to the next "## " heading, and adds a "Full Changelog" link when it can work out the
 previous version and the GitHub repo.
 
-The release workflow in templates/github/release.yml runs this automatically when you push a tag.
+The release workflow in templates/github/workflows/release.yml runs this automatically when you push a tag.
 
 Exit code 0 = notes printed, 1 = no section for that version (the message says how to add one).
 Only uses the Python standard library.

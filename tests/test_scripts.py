@@ -7,6 +7,7 @@ the exit code and the message. Only uses the Python standard library (plus git, 
 """
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -144,6 +145,32 @@ class SafeToPublish(Temp):
         self.assertEqual(code, 1)
         self.assertIn("new.iso", out)
 
+    def test_non_ascii_name_is_checked(self):
+        write(self.repo, "roms/Pokémon.gb", b"\x00rom")
+        self.git("add", "-A")
+        code, out = run("check-safe-to-publish.py", cwd=self.repo)
+        self.assertEqual(code, 1, out)
+        self.assertIn("Pokémon.gb: looks like a Game Boy ROM", out)
+        code, out = run("check-safe-to-publish.py", "--staged", cwd=self.repo)
+        self.assertEqual(code, 1, out)
+
+    def test_staged_checks_the_staged_copy_not_the_disk(self):
+        write(self.repo, "blob.dat", b"\x00" * (6 * 1024 * 1024))
+        self.git("add", "blob.dat")
+        write(self.repo, "blob.dat", "small now")  # edited after git add; the big copy is what gets committed
+        code, out = run("check-safe-to-publish.py", "--staged", cwd=self.repo)
+        self.assertEqual(code, 1, out)
+        self.assertIn("blob.dat: a 6.0 MB binary", out)
+
+    def test_secrets_blocked(self):
+        write(self.repo, ".env", "TOKEN=abc")
+        write(self.repo, "keys/server.pem", "-----BEGIN PRIVATE KEY-----")
+        self.git("add", "-A")
+        code, out = run("check-safe-to-publish.py", cwd=self.repo)
+        self.assertEqual(code, 1, out)
+        self.assertIn(".env: looks like a secrets file", out)
+        self.assertIn("server.pem: looks like a private key", out)
+
 
 class Hook(Temp):
     """The pre-commit hook finds the scripts in scripts/ or docs/scripts/."""
@@ -186,6 +213,22 @@ class Hook(Temp):
         write(self.repo, "main.c", "x")
         self.git("add", "-A")
         self.assertEqual(self.commit().returncode, 0)
+
+    @unittest.skipIf(os.name == "nt", "fakes python3 with a shell script")
+    def test_broken_python3_falls_back(self):
+        """Like the Windows Store 'python3' shortcut: on PATH, but fails when run."""
+        fake = self.repo / ".fakebin"
+        write(self.repo, ".fakebin/python3", "#!/bin/sh\necho 'Python was not found' >&2\nexit 9\n").chmod(0o755)
+        (fake / "python").symlink_to(sys.executable)
+        self.install("scripts")
+        write(self.repo, "game.gb", b"\x00")
+        self.git("add", "game.gb")
+        r = subprocess.run(["git", "commit", "-qm", "t"], cwd=self.repo, capture_output=True, text=True,
+                           env={**os.environ, "PATH": f"{fake}{os.pathsep}{os.environ['PATH']}",
+                                "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+                                "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"})
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("Game Boy ROM", r.stdout + r.stderr)
 
 
 # ---------------------------------------------------------------- check-research.py
@@ -243,6 +286,40 @@ class Research(Temp):
         write(self.repo, "docs/research/a.md", "x [confirmed @ t | dotnet=7.0]\n")
         code, _ = run("check-research.py", "--warn-only", cwd=self.repo)
         self.assertEqual(code, 0)
+
+    def test_unlisted_doc_fails(self):
+        write(self.repo, "docs/research/save.md", "# Save\n")
+        write(self.repo, "docs/research/net.md", "# Net\n")
+        write(self.repo, "docs/research/INDEX.md", "| a | [save.md](save.md) |\n")
+        code, out = run("check-research.py", cwd=self.repo)
+        self.assertEqual(code, 1, out)
+        self.assertIn("  - docs/research/net.md", out)
+
+    def test_runs_from_a_subfolder(self):
+        (self.repo / ".git").mkdir()
+        write(self.repo, "docs/HANDOFF.md", HANDOFF_VERSIONS)
+        write(self.repo, "docs/research/a.md", "x [confirmed @ t | dotnet=7.0]\n")
+        write(self.repo, "src/x.c", "x")
+        code, out = run("check-research.py", cwd=self.repo / "src")
+        self.assertEqual(code, 1, out)
+        self.assertIn("docs/research/a.md:1: proven on t with dotnet 7.0; now 8.0.1", out)
+
+    def test_comments_and_code_blocks_ignored(self):
+        write(self.repo, "docs/research/save.md", "# Save\n```\n# not a heading\n```\n")
+        write(self.repo, "docs/research/INDEX.md",
+              "<!-- example: [x](example.md) -->\n| a | [save.md](save.md) |\n| b | [s](save.md#not-a-heading) |\n")
+        code, out = run("check-research.py", cwd=self.repo)
+        self.assertEqual(code, 1, out)
+        self.assertNotIn("example.md", out)
+        self.assertIn("no heading for #not-a-heading", out)
+
+    def test_unknown_tool_in_stamp(self):
+        write(self.repo, "docs/HANDOFF.md", HANDOFF_VERSIONS)
+        write(self.repo, "docs/research/a.md", "x [confirmed @ t | xenia=1.2.3]\n")
+        write(self.repo, "docs/research/INDEX.md", "| a | [a.md](a.md) |\n")
+        code, out = run("check-research.py", cwd=self.repo)
+        self.assertEqual(code, 1, out)
+        self.assertIn("docs/research/a.md:1: 'xenia'", out)
 
 
 # ---------------------------------------------------------------- check-report.py
@@ -305,6 +382,25 @@ class Report(Temp):
         self.assertEqual(code, 1)
         self.assertIn("placeholders", out)
 
+    def test_stopped_with_template_heading_passes(self):
+        stopped = GOOD_REPORT.replace("**Status:** done", "**Status:** stopped").replace(
+            "## Open questions", '## Stopped because (only if status is "stopped")\nFailed 3 times.\n\n## Open questions')
+        code, out = self.check(stopped)
+        self.assertEqual(code, 0, out)
+
+    def test_unfilled_status_line(self):
+        code, out = self.check(GOOD_REPORT.replace("**Status:** done", "**Status:** done | stopped | partial"))
+        self.assertEqual(code, 1)
+        self.assertIn("Status", out)
+
+    def test_empty_sections_and_test_block(self):
+        bad = GOOD_REPORT.replace("- SaveIO.cs: header parser (`abc1234`)", "") \
+                         .replace("dotnet test\nPassed: 12, Failed: 0\n", "")
+        code, out = self.check(bad)
+        self.assertEqual(code, 1)
+        self.assertIn("'## What changed' is empty", out)
+        self.assertIn("no filled-in code block", out)
+
 
 # ---------------------------------------------------------------- check-prompt.py
 GOOD_PROMPT = """
@@ -366,6 +462,45 @@ class Prompt(Temp):
         self.assertEqual(code, 1)
         self.assertIn("placeholders", out)
 
+    def test_bullet_facts_flagged(self):
+        bad = GOOD_PROMPT.replace("| Header is 0x40 bytes | confirmed | capture a.sav |",
+                                  "| Header is 0x40 bytes | confirmed | capture a.sav |\n\n- Checksum is CRC32")
+        code, out = self.check(bad)
+        self.assertEqual(code, 1)
+        self.assertIn("'Checksum is CRC32' is a bullet", out)
+
+    def test_facts_none_allowed(self):
+        ok = re.sub(r"\| Fact .*?capture a\.sav \|", "None.", GOOD_PROMPT, flags=re.S)
+        code, out = self.check(ok)
+        self.assertEqual(code, 0, out)
+
+    def test_empty_goal_and_weak_branch(self):
+        bad = GOOD_PROMPT.replace("Parse the 0x40-byte save header.", "") \
+                         .replace("`m2-save-format`, branched from tag `m1`.", "Not a tag, work on `main`.")
+        code, out = self.check(bad)
+        self.assertEqual(code, 1)
+        self.assertIn("'## Goal' is empty", out)
+        self.assertIn("tag to branch from", out)
+
+
+# ---------------------------------------------------------------- placeholder lists stay in step with the templates
+class Placeholders(unittest.TestCase):
+    """Each checker keeps a list of its template's <placeholders>. If a template gains a new one, this fails."""
+
+    def caught(self, script, template):
+        src = (SCRIPTS / script).read_text(encoding="utf-8")
+        pattern = re.search(r'PLACEHOLDER = (re\.compile\(.*?\))\n', src, re.S).group(1)
+        rx = eval(pattern, {"re": re})
+        text = re.sub(r"<!--.*?-->", "", (ROOT / "templates" / template).read_text(encoding="utf-8"), flags=re.S)
+        missed = [m for m in re.findall(r"<[^<>\n]+>", text) if not rx.fullmatch(m)]
+        self.assertEqual(missed, [], f"{script} doesn't catch these placeholders from templates/{template}")
+
+    def test_prompt(self):
+        self.caught("check-prompt.py", "PROMPT.md")
+
+    def test_report(self):
+        self.caught("check-report.py", "REPORT.md")
+
 
 # ---------------------------------------------------------------- detect-mode.py (the skill's mode table)
 class DetectMode(Temp):
@@ -413,6 +548,16 @@ class DetectMode(Temp):
         write(self.repo, "src/a.c", "x")
         write(self.repo, "docs/HANDOFF.md", "# h")
         self.assertEqual(self.mode()["mode"], "continue")
+
+    def test_antigravity_rules_folder_found(self):
+        write(self.repo, "src/a.c", "x")
+        write(self.repo, ".agents/rules/style.md", "---\ntrigger: always_on\n---\n")
+        self.assertIn(".agents/rules", self.mode()["rules_files"])
+
+    def test_missing_folder_json_error(self):
+        code, out = run("detect-mode.py", str(self.repo / "nope"), "--json", cwd=self.repo)
+        self.assertEqual(code, 1)
+        self.assertIn("error", json.loads(out))
 
 
 if __name__ == "__main__":

@@ -1,5 +1,53 @@
 # Changelog
 
+## v1.5.0
+Fixes from two outside reviews (Qwen and Gemini), each checked against the code before changing anything.
+
+### Fixed
+- **Pre-commit hook on Windows.** The hook picked `python3` just because the name existed, and on Windows that's
+  often the Microsoft Store shortcut, which fails. It now uses the first of `python3`, `python`, `py` that actually
+  runs, and says how to fix it if none do.
+- **`check-safe-to-publish.py`** missed files with non-ASCII names (`Pokémon.gb` passed). It now reads git's file
+  list safely, and with `--staged` it checks the staged copy of each file (what will be committed), not the one on
+  disk. It also blocks `.rom` files and common secrets: `.env`, `.pem`, `.key`, `.p12`, `.pfx`, `id_rsa`,
+  `id_ed25519`, `credentials.json`.
+- **`check-report.py`** rejected a valid stopped report that kept the template's heading
+  (`## Stopped because (only if status is "stopped")`), and read the unfilled `done | stopped | partial` line as
+  "done". Empty sections and an empty Tests code block now fail.
+- **`check-prompt.py`** let known facts written as bullets skip the confirmed/unverified check. Bullets are now
+  flagged (use the table, or write "None."), empty required sections fail, and the Branch must name the tag in
+  backticks.
+- **`check-research.py`** now works from any folder in the repo, prints paths with `/` on Windows, ignores
+  commented-out examples in `INDEX.md` and `#` lines inside code blocks, and flags stamps that name a tool missing
+  from the Tool versions table. Research docs missing from the index, or a missing index, now fail (CI still uses
+  `--warn-only`).
+- **`check-handoff.py`** follows Markdown links from HANDOFF.md's own folder, the way GitHub does, so
+  a link to `docs/research/a.md` written inside `docs/HANDOFF.md` (which GitHub opens as
+  `docs/docs/research/a.md`) is caught as broken. A Lesson that mentions
+  `docs/reports/` no longer passes for the agent-summary line, and `(x2).` with trailing punctuation is recognised.
+- **`detect-mode.py`** finds Antigravity's `.agents/rules/` folder, and exits 1 (with a JSON error under `--json`)
+  when the folder doesn't exist.
+- Tests now fail if a template gains a `<placeholder>` that its check script doesn't catch.
+
+### Changed
+- The agent now **pushes its branch** when it writes its report (AGENTS.md, PROMPT.md), since the coordinator reads
+  the report from `origin`.
+- The agent no longer edits `docs/HANDOFF.md` or `docs/MILESTONES.md` (the coordinator owns them), and the skill
+  says how to resolve doc conflicts at merge.
+- The skill says plainly that the check scripts check shape, not truth, so the review steps after them still matter.
+- README: Claude Code install now uses the release zips, which include `templates/`.
+- README: one line under the neural-network table saying this is a borrowed design, not a neural network
+  (nothing is trained), with a link to where the comparison stops.
+
+### Upgrading
+- Re-upload `agent-coordinator.zip` (or replace its folder in `~/.claude/skills/`, including `templates/`).
+- In each project, copy the new `templates/scripts/*.py` and `templates/hooks/pre-commit` over the old ones, then
+  reinstall the hook: `cp scripts/hooks/pre-commit .git/hooks/pre-commit`.
+- Copy the two new lines from `templates/AGENTS.md` (push your branch; don't edit HANDOFF.md/MILESTONES.md) into
+  your project's `AGENTS.md`.
+- `check-research.py` without `--warn-only` now fails on research docs missing from `INDEX.md`. Add them, or keep
+  `--warn-only`.
+
 ## v1.4.1
 - **Scripts in `docs/scripts/`.** The check scripts can now live in `docs/scripts/` as well as `scripts/`. The
   coordinator looks in both when it scans a project, `detect-mode.py` reports which one a repo uses, and the
